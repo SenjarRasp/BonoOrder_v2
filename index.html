@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bono заявки</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" type="image/png" href="${getAppLogo()}">
+</head>
+<body>
+    <div id="app">
+        <!-- Экраны будут рендериться здесь -->
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-dots">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        <div class="loading-text" id="loadingText">Загрузка...</div>
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+    </div>
+    
+    <script src="logo.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+
+
+
+
+
