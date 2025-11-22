@@ -5,7 +5,7 @@ const APP_LOGO_BASE64 = `iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAAAXNSR0I
 // Альтернативно можно использовать URL до изображения
 const APP_LOGO_URL = '';
 
-// Метод для получения логотипа
+// Метод для получения логотип
 function getAppLogo() {
     if (APP_LOGO_BASE64) {
         return `data:image/png;base64,${APP_LOGO_BASE64}`;
