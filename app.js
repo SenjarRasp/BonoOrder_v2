@@ -4,7 +4,7 @@ class RestaurantOrderApp {
             ? '/BonoOrder_v2/' 
             : '/';
         
-        this.apiUrl = 'https://script.google.com/macros/s/AKfycbxW1oV2a8RHfkjrxXIMm4k_ZYFMOYLLAkafMKBQmrhHsHcLW8A1QOay5nTaD9nIjV9osw/exec';
+        this.apiUrl = 'https://script.google.com/macros/s/AKfycbwt3xmCpiMHvd69ISqq6ukfdnqURG3Az0rAf3piRPGHbEfdsaTujZqkcj3yf8wboTFLMA/exec';
         this.currentUser = null;
         this.currentScreen = 'login';
         this.ordersHistory = [];
@@ -2548,3 +2548,4 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
