@@ -217,7 +217,8 @@ class RestaurantOrderApp {
                 department: loginResult.user.department,
                 position: loginResult.user.position,
                 templates: loginResult.user.templates,
-                isAdmin: loginResult.user.isAdmin || false
+                isAdmin: loginResult.user.isAdmin || false,
+                isSuperAdmin: loginResult.user.isSuperAdmin || false  // Добавить эту строку
             };
     
             // Улучшенная проверка прав - обрабатываем разные форматы
@@ -2548,4 +2549,5 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
