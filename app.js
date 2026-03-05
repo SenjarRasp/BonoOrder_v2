@@ -359,12 +359,10 @@ class RestaurantOrderApp {
     // API вызов
     async apiCall(action, data = {}) {
         console.log('📡 API Call:', action, data);
-
-        // Блокируем UI перед запросом
+    
         this.disableUI();
         
         try {
-            // Добавляем небольшую задержку между запросами
             await new Promise(resolve => setTimeout(resolve, 500));
             
             const url = new URL(this.apiUrl);
@@ -391,19 +389,71 @@ class RestaurantOrderApp {
         } catch (error) {
             console.error('❌ API Error:', error);
             
-            // Специальная обработка для CORS ошибок
-            if (error.message.includes('Failed to fetch') || error.message.includes('CORS') || error.message.includes('status: 0')) {
-                console.log('CORS/Network error detected, trying JSONP approach...');
+            // Если fetch не сработал из-за CORS - используем JSONP
+            if (error.message.includes('Failed to fetch') || 
+                error.message.includes('CORS') || 
+                error.message.includes('NetworkError')) {
+                
+                console.log('CORS/Network error detected, trying JSONP...');
+                // ВАЖНО: возвращаем результат JSONP, а не выбрасываем ошибку
                 return this.apiCallJSONP(action, data);
             }
             
             throw new Error('Ошибка соединения: ' + error.message);
         } finally {
-            // Всегда разблокируем UI после завершения запроса
             this.hideLoading();
         }
     }
-
+    // Альтернативный метод для обхода CORS
+    apiCallJSONP(action, data = {}) {
+        return new Promise((resolve, reject) => {
+            const callbackName = 'jsonp_callback_' + Date.now();
+            
+            // Создаем URL для JSONP
+            const url = new URL(this.apiUrl);
+            url.searchParams.set('action', action);
+            url.searchParams.set('data', JSON.stringify(data));
+            url.searchParams.set('callback', callbackName);
+            
+            console.log('📡 JSONP Call:', url.toString());
+            
+            // Создаем глобальную функцию callback
+            window[callbackName] = function(response) {
+                console.log('✅ JSONP Response:', response);
+                delete window[callbackName];
+                document.head.removeChild(script);
+                
+                if (response && response.status === 'success') {
+                    resolve(response.data);
+                } else {
+                    reject(new Error(response?.message || 'Unknown JSONP error'));
+                }
+            };
+            
+            // Создаем и добавляем script тег
+            const script = document.createElement('script');
+            script.src = url.toString();
+            script.onerror = function() {
+                console.error('❌ JSONP Error');
+                delete window[callbackName];
+                document.head.removeChild(script);
+                reject(new Error('JSONP request failed'));
+            };
+            
+            document.head.appendChild(script);
+            
+            // Таймаут на случай если ничего не пришло
+            setTimeout(() => {
+                if (window[callbackName]) {
+                    console.warn('JSONP timeout');
+                    delete window[callbackName];
+                    document.head.removeChild(script);
+                    reject(new Error('JSONP timeout'));
+                }
+            }, 10000);
+        });
+    }
+    
     // Альтернативный метод для обхода CORS
     async apiCallAlternative(action, data = {}) {
         try {
@@ -2548,6 +2598,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
