@@ -359,47 +359,19 @@ class RestaurantOrderApp {
     // API вызов
     async apiCall(action, data = {}) {
         console.log('📡 API Call:', action, data);
-    
+        
         this.disableUI();
         
         try {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            const url = new URL(this.apiUrl);
-            url.searchParams.set('action', action);
-            url.searchParams.set('data', JSON.stringify(data));
-            
-            console.log('Fetching URL:', url.toString());
-            
-            const response = await fetch(url.toString());
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const result = await response.json();
-            console.log('✅ API Response:', result);
-            
-            if (result.status === 'success') {
-                return result.data;
-            } else {
-                throw new Error(result.message || 'Unknown API error');
-            }
+            // СРАЗУ ИСПОЛЬЗУЕМ JSONP, без fetch
+            console.log('📡 Using JSONP for:', action);
+            const result = await this.apiCallJSONP(action, data);
+            return result;
             
         } catch (error) {
             console.error('❌ API Error:', error);
-            
-            // Если fetch не сработал из-за CORS - используем JSONP
-            if (error.message.includes('Failed to fetch') || 
-                error.message.includes('CORS') || 
-                error.message.includes('NetworkError')) {
-                
-                console.log('CORS/Network error detected, trying JSONP...');
-                // ВАЖНО: возвращаем результат JSONP, а не выбрасываем ошибку
-                return this.apiCallJSONP(action, data);
-            }
-            
-            throw new Error('Ошибка соединения: ' + error.message);
+            this.showNotification('error', 'Ошибка соединения: ' + error.message);
+            throw error;
         } finally {
             this.hideLoading();
         }
@@ -2598,6 +2570,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
