@@ -4,7 +4,7 @@ class RestaurantOrderApp {
             ? '/BonoOrder_v2/' 
             : '/';
         
-        this.apiUrl = 'https://script.google.com/macros/s/AKfycbxihszhYDtzryT0GnDE7X91xzqcp6_IXrrQuxkheC98MxtNwgAuelTYt0frMJtih0m1-A/exec';
+        this.apiUrl = 'https://script.google.com/macros/s/AKfycbyTRQVXl2ha_Y82Hh3pl9P86QTt1ngx3wLESbo6OTiTnOJdSxeIVUKQoFEwBvSNFdertg/exec';
         this.currentUser = null;
         this.currentScreen = 'login';
         this.ordersHistory = [];
@@ -211,35 +211,27 @@ class RestaurantOrderApp {
             this.showLoading('Вход в систему...');
             const loginResult = await this.apiCall('login', { phone, password });
            
-            this.currentUser = {
+           this.currentUser = {
                 phone: loginResult.user.phone,
                 name: loginResult.user.name,
                 department: loginResult.user.department,
                 position: loginResult.user.position,
                 templates: loginResult.user.templates,
-                isAdmin: loginResult.user.isAdmin || false,
-                isSuperAdmin: loginResult.user.isSuperAdmin || false  // Добавить эту строку
+                isAdmin: loginResult.user.isAdmin || false
             };
-    
-            // Улучшенная проверка прав - обрабатываем разные форматы
-            const adminValue = this.currentUser.isAdmin;
-            console.log('Raw admin value:', adminValue, 'Type:', typeof adminValue);
             
-            let adminStatus;
-            if (typeof adminValue === 'boolean') {
-                adminStatus = adminValue ? 'TRUE' : 'FALSE';
-            } else if (typeof adminValue === 'string') {
-                adminStatus = adminValue.toUpperCase();
-            } else {
-                adminStatus = String(adminValue).toUpperCase();
-            }
+            // ========== ЭТО ЕДИНСТВЕННОЕ ПРАВИЛЬНОЕ РЕШЕНИЕ ==========
+            // Преобразуем admin значение в строку и приводим к верхнему регистру
+            const adminValue = String(this.currentUser.isAdmin).trim().toUpperCase();
+            console.log('Admin value normalized:', adminValue);
             
-            this.isAdmin = adminStatus === 'TRUE' || adminStatus === 'SUPER';
-            this.isSuperAdmin = adminStatus === 'SUPER';
-        
+            // Проверяем права одним условием
+            this.isAdmin = (adminValue === 'TRUE' || adminValue === 'SUPER' || adminValue === '1' || adminValue === 'YES');
+            this.isSuperAdmin = (adminValue === 'SUPER');
+            
             console.log('Login debug:', {
-                rawAdmin: adminValue,
-                adminStatus,
+                original: this.currentUser.isAdmin,
+                normalized: adminValue,
                 isAdmin: this.isAdmin,
                 isSuperAdmin: this.isSuperAdmin
             });
@@ -2549,6 +2541,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
