@@ -4,7 +4,7 @@ class RestaurantOrderApp {
             ? '/BonoOrder_v2/' 
             : '/';
         
-        this.apiUrl = 'https://script.google.com/macros/s/AKfycbxTk9lj5TdkkR9ovlRkcU90x9udNMbAno2lw7AFToyCKZPu4aIPlkBZEUc4wME8m5KnBg/exec';
+        this.apiUrl = 'https://script.google.com/macros/s/AKfycbxW1oV2a8RHfkjrxXIMm4k_ZYFMOYLLAkafMKBQmrhHsHcLW8A1QOay5nTaD9nIjV9osw/exec';
         this.currentUser = null;
         this.currentScreen = 'login';
         this.ordersHistory = [];
@@ -359,73 +359,51 @@ class RestaurantOrderApp {
     // API вызов
     async apiCall(action, data = {}) {
         console.log('📡 API Call:', action, data);
-        
+
+        // Блокируем UI перед запросом
         this.disableUI();
         
         try {
-            // СРАЗУ ИСПОЛЬЗУЕМ JSONP, без fetch
-            console.log('📡 Using JSONP for:', action);
-            const result = await this.apiCallJSONP(action, data);
-            return result;
+            // Добавляем небольшую задержку между запросами
+            await new Promise(resolve => setTimeout(resolve, 500));
             
-        } catch (error) {
-            console.error('❌ API Error:', error);
-            this.showNotification('error', 'Ошибка соединения: ' + error.message);
-            throw error;
-        } finally {
-            this.hideLoading();
-        }
-    }
-    // Альтернативный метод для обхода CORS
-    apiCallJSONP(action, data = {}) {
-        return new Promise((resolve, reject) => {
-            const callbackName = 'jsonp_callback_' + Date.now();
-            
-            // Создаем URL для JSONP
             const url = new URL(this.apiUrl);
             url.searchParams.set('action', action);
             url.searchParams.set('data', JSON.stringify(data));
-            url.searchParams.set('callback', callbackName);
             
-            console.log('📡 JSONP Call:', url.toString());
+            console.log('Fetching URL:', url.toString());
             
-            // Создаем глобальную функцию callback
-            window[callbackName] = function(response) {
-                console.log('✅ JSONP Response:', response);
-                delete window[callbackName];
-                document.head.removeChild(script);
-                
-                if (response && response.status === 'success') {
-                    resolve(response.data);
-                } else {
-                    reject(new Error(response?.message || 'Unknown JSONP error'));
-                }
-            };
+            const response = await fetch(url.toString());
             
-            // Создаем и добавляем script тег
-            const script = document.createElement('script');
-            script.src = url.toString();
-            script.onerror = function() {
-                console.error('❌ JSONP Error');
-                delete window[callbackName];
-                document.head.removeChild(script);
-                reject(new Error('JSONP request failed'));
-            };
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
-            document.head.appendChild(script);
+            const result = await response.json();
+            console.log('✅ API Response:', result);
             
-            // Таймаут на случай если ничего не пришло
-            setTimeout(() => {
-                if (window[callbackName]) {
-                    console.warn('JSONP timeout');
-                    delete window[callbackName];
-                    document.head.removeChild(script);
-                    reject(new Error('JSONP timeout'));
-                }
-            }, 10000);
-        });
+            if (result.status === 'success') {
+                return result.data;
+            } else {
+                throw new Error(result.message || 'Unknown API error');
+            }
+            
+        } catch (error) {
+            console.error('❌ API Error:', error);
+            
+            // Специальная обработка для CORS ошибок
+            if (error.message.includes('Failed to fetch') || error.message.includes('CORS') || error.message.includes('status: 0')) {
+                console.log('CORS/Network error detected, trying JSONP approach...');
+                return this.apiCallJSONP(action, data);
+            }
+            
+            throw new Error('Ошибка соединения: ' + error.message);
+        } finally {
+            // Всегда разблокируем UI после завершения запроса
+            this.hideLoading();
+        }
     }
-    
+
     // Альтернативный метод для обхода CORS
     async apiCallAlternative(action, data = {}) {
         try {
@@ -2570,17 +2548,3 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
