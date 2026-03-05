@@ -1,11 +1,11 @@
 // sw.js - Service Worker для Restaurant Orders
 const CACHE_NAME = 'restaurant-orders-v4';
 const urlsToCache = [
-  '/BonoOrder/',
-  '/BonoOrder/index.html',
-  '/BonoOrder/styles.css',
-  '/BonoOrder/app.js',
-  '/BonoOrder/manifest.json'
+  '/BonoOrder_v2/',
+  '/BonoOrder_v2/index.html',
+  '/BonoOrder_v2/styles.css',
+  '/BonoOrder_v2/app.js',
+  '/BonoOrder_v2/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -82,6 +82,7 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
 
 
 
