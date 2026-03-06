@@ -2393,9 +2393,9 @@ class RestaurantOrderApp {
                     <div class="input-group">
                         <label>Права:</label>
                         <select id="admin_${user.phone}" style="width: 100%;">
-                            <option value="FALSE" ${String(user.admin).trim() === 'FALSE' ? 'selected' : ''}>Обычный пользователь</option>
-                            <option value="TRUE" ${String(user.admin).trim() === 'TRUE' ? 'selected' : ''}>Администратор</option>
-                            <option value="SUPER" ${String(user.admin).trim() === 'SUPER' ? 'selected' : ''}>Супер-администратор</option>
+                            <option value="FALSE" ${String(user.admin).trim().toUpperCase() === 'FALSE' ? 'selected' : ''}>Обычный пользователь</option>
+                            <option value="TRUE" ${String(user.admin).trim().toUpperCase() === 'TRUE' ? 'selected' : ''}>Администратор</option>
+                            <option value="SUPER" ${String(user.admin).trim().toUpperCase() === 'SUPER' ? 'selected' : ''}>Супер-администратор</option>
                         </select>
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 10px;">
