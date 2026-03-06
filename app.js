@@ -2603,11 +2603,6 @@ class RestaurantOrderApp {
             });
         }
     }
-    
-    // Показать уведомление (без изменений)
-    showNotification(type, message) {
-        // ... существующий код без изменений
-    }
 
     // Настройка обработчиков событий
     setupEventListeners() {
@@ -2768,6 +2763,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
