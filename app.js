@@ -2347,6 +2347,8 @@ class RestaurantOrderApp {
                 `<option value="${template.name}" ${userTemplates.includes(template.name) ? 'selected' : ''}>${template.name}</option>`
             ).join('');
     
+            console.log('Users data:', users.map(u => ({ phone: u.phone, admin: u.admin, adminTrimmed: String(u.admin).trim() })));
+    
             return `
                 <div class="user-item" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
                     <h3>${user.name} (${user.phone ? user.phone.replace(/^'/, '') : ''})</h3>
