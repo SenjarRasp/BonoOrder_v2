@@ -153,7 +153,19 @@ class RestaurantOrderApp {
         this.cachedProducts = products.products || [];
         this.cachedSuppliers = suppliers.suppliers || [];
         this.cachedTemplates = templates.templates || [];
-    
+
+        // Извлекаем теги из загруженных продуктов
+        const tagsSet = new Set();
+        this.cachedProducts.forEach(p => {
+            if (p.product_tags) {
+                p.product_tags.split(',').forEach(tag => {
+                    tag = tag.trim();
+                    if (tag) tagsSet.add(tag);
+                });
+            }
+        });
+        this.cachedTags = Array.from(tagsSet).sort();
+          
         this.saveCachedData('Products', products);
         this.saveCachedData('Suppliers', suppliers);
         this.saveCachedData('Templates', templates);
@@ -977,13 +989,7 @@ class RestaurantOrderApp {
             clipboardPasteParser: 'table',  // парсить как таблицу
             history: true,                   // поддержка undo/redo
             movableColumns: true,
-            resizableColumns: true,
-            persistence: {
-                columns: true,
-                filter: true,
-                sort: true
-            },
-            persistenceID: 'products_table'
+            resizableColumns: true
         });
         window.addEventListener('resize', () => {
             if (this.table) this.table.redraw();
@@ -3173,6 +3179,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
