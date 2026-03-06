@@ -222,8 +222,7 @@ class RestaurantOrderApp {
     }
     
     // Показать успешную анимацию
-    showSuccess(message = 'Успешно!') {
-        this.showLoading(message);
+    showSuccess(message = 'Успешно!', callback = null) {
         const overlay = document.getElementById('loadingOverlay');
         const loadingText = document.getElementById('loadingText');
         
@@ -241,9 +240,9 @@ class RestaurantOrderApp {
                 </div>
             `;
             
-            // Автоматически скрываем через 2 секунды
             setTimeout(() => {
                 this.hideLoading();
+                if (callback) callback();
             }, 2000);
         }
     }
@@ -307,7 +306,7 @@ class RestaurantOrderApp {
             this.showLoading('Вход в систему...');
             const loginResult = await this.apiCall('login', { phone, password });
            
-           this.currentUser = {
+            this.currentUser = {
                 phone: loginResult.user.phone,
                 name: loginResult.user.name,
                 department: loginResult.user.department,
@@ -322,23 +321,16 @@ class RestaurantOrderApp {
             
             // Преобразуем admin значение в строку и приводим к верхнему регистру
             const adminValue = String(this.currentUser.isAdmin).trim().toUpperCase();
-            console.log('Admin value normalized:', adminValue);
             
             // Проверяем права одним условием
             this.isAdmin = (adminValue === 'TRUE' || adminValue === 'SUPER' || adminValue === '1' || adminValue === 'YES');
             this.isSuperAdmin = (adminValue === 'SUPER');
             
-            console.log('Login debug:', {
-                original: this.currentUser.isAdmin,
-                normalized: adminValue,
-                isAdmin: this.isAdmin,
-                isSuperAdmin: this.isSuperAdmin
-            });
-        
-            this.showSuccess(`Добро пожаловать, ${this.currentUser.name}!`);
-            setTimeout(() => {
+            // Показываем приветствие (гарантируем, что overlay активен)
+            this.showLoading(`Добро пожаловать, ${this.currentUser.name}!`);
+            this.showSuccess(`Добро пожаловать, ${this.currentUser.name}!`, () => {
                 this.renderScreen('main');
-            }, 2000);
+            });
             
         } catch (error) {
             this.hideLoading();
@@ -2707,6 +2699,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
