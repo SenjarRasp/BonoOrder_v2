@@ -900,9 +900,10 @@ class RestaurantOrderApp {
                 { 
                     title: 'Теги', 
                     field: 'product_tags', 
-                    editor: 'autocomplete',
+                    editor: 'list',
                     editorParams: {
                         values: this.cachedTags || [],
+                        autocomplete: true,
                         allowEmpty: true,
                         freetext: true
                     },
@@ -940,9 +941,10 @@ class RestaurantOrderApp {
                 { 
                     title: 'Поставщики', 
                     field: 'supplier', 
-                    editor: 'autocomplete',
+                    editor: 'list',
                     editorParams: {
                         values: this.getSuppliersList(),
+                        autocomplete: true,
                         allowEmpty: true,
                         freetext: true  // разрешить ввод нового значения
                     },
@@ -3171,6 +3173,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
