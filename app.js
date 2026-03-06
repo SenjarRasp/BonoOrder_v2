@@ -49,7 +49,8 @@ class RestaurantOrderApp {
               this.currentOrderData[key].comment = e.target.value;
             }
             this.saveOrderDraft();
-          });
+          }
+        });
         window.addEventListener('beforeunload', () => {
           // Сохраняем черновик только если находимся на экране создания заявки
           if (this.currentScreen === 'order_creation') {
@@ -2843,6 +2844,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
