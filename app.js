@@ -167,6 +167,12 @@ class RestaurantOrderApp {
       }
     }
 
+    getSuppliersList() {
+        // Извлекаем уникальные имена поставщиков из кэша
+        const suppliers = this.cachedSuppliers.map(s => s.name);
+        return [...new Set(suppliers)].sort();
+    }
+    
     showNotification(type, message, duration = 3000) {
       // Контейнер для уведомлений (создаётся при первом вызове)
       let toastContainer = document.getElementById('toast-container');
@@ -856,7 +862,9 @@ class RestaurantOrderApp {
     initProductsTable() {
         const container = document.getElementById('products-table');
         if (!container) return;
-    
+        window.addEventListener('resize', () => {
+            if (this.table) this.table.redraw();
+        });
         // Подготовка данных: преобразуем cachedProducts в формат для таблицы
         const tableData = this.cachedProducts.map(p => ({
             id: p.id,
@@ -866,13 +874,20 @@ class RestaurantOrderApp {
             pack_quantity: p.pack_quantity || 1,
             shelf_life: p.shelf_life || '',
             min_stock: p.min_stock || 0,
-            supplier: p.supplier || ''
+            supplier: p.supplier || '',
+            department: p.department || ''
         }));
     
         this.table = new Tabulator(container, {
             data: tableData,
             layout: 'fitColumns',
             placeholder: 'Нет данных',
+            persistence: {
+                columns: true,  // сохранять ширину и порядок колонок
+                filter: true,   // (опционально) сохранять фильтры
+                sort: true,     // (опционально) сохранять сортировку
+            },
+            persistenceID: 'products_table', // уникальный идентификатор для localStorage
             columns: [
                 { title: 'ID', field: 'id', visible: false },
                 { 
@@ -885,7 +900,12 @@ class RestaurantOrderApp {
                 { 
                     title: 'Теги', 
                     field: 'product_tags', 
-                    editor: 'input', 
+                    editor: 'autocomplete',
+                    editorParams: {
+                        values: this.cachedTags || [],
+                        allowEmpty: true,
+                        freetext: true
+                    },
                     headerFilter: 'input',
                     tooltip: true 
                 },
@@ -920,9 +940,21 @@ class RestaurantOrderApp {
                 { 
                     title: 'Поставщики', 
                     field: 'supplier', 
-                    editor: 'input', 
+                    editor: 'autocomplete',
+                    editorParams: {
+                        values: this.getSuppliersList(),
+                        allowEmpty: true,
+                        freetext: true  // разрешить ввод нового значения
+                    },
                     headerFilter: 'input',
                     tooltip: true 
+                },
+                { 
+                    title: 'Департамент', 
+                    field: 'department', 
+                    editor: 'input', 
+                    headerFilter: 'input',
+                    width: 120
                 },
                 {
                     title: 'Действия',
@@ -944,8 +976,16 @@ class RestaurantOrderApp {
             history: true,                   // поддержка undo/redo
             movableColumns: true,
             resizableColumns: true
+                persistence: {
+                columns: true,
+                filter: true,
+                sort: true
+            },
+            persistenceID: 'products_table'
         });
-    
+        window.addEventListener('resize', () => {
+            if (this.table) this.table.redraw();
+        });
         // Сохраняем экземпляр таблицы в app для доступа из других методов
     }
 
@@ -967,7 +1007,7 @@ class RestaurantOrderApp {
         if (!this.table) return;
     
         // Получаем все изменения
-        const changes = this.table.getChanges();
+        const changes = this.table.getDataChanges();
         if (!changes.updated.length && !changes.added.length && !changes.deleted.length) {
             this.showNotification('info', 'Нет изменений для сохранения');
             return;
@@ -987,7 +1027,8 @@ class RestaurantOrderApp {
                     pack_quantity: row.pack_quantity,
                     shelf_life: row.shelf_life,
                     min_stock: row.min_stock,
-                    supplier: row.supplier
+                    supplier: row.supplier,
+                    department: row.department
                 })),
                 added: changes.added.map(row => ({
                     name: row.name,
@@ -996,7 +1037,8 @@ class RestaurantOrderApp {
                     pack_quantity: row.pack_quantity,
                     shelf_life: row.shelf_life,
                     min_stock: row.min_stock,
-                    supplier: row.supplier
+                    supplier: row.supplier,
+                    department: row.department
                 })),
                 deleted: changes.deleted.map(row => row.id)
             };
@@ -1086,6 +1128,11 @@ class RestaurantOrderApp {
                             <option value="">-- Выберите поставщика --</option>
                             ${suppliersOptions}
                         </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Департамент</label>
+                        <input type="text" id="productDepartment" placeholder="Бар, Кухня и т.д.">
                     </div>
                     
                     <button type="submit" class="btn primary" style="width: 100%;">
@@ -3038,6 +3085,7 @@ class RestaurantOrderApp {
         const shelfLife = document.getElementById('productShelfLife').value;
         const minStock = document.getElementById('productMinStock').value;
         const supplier = document.getElementById('productSupplier').value;
+        const department = document.getElementById('productDepartment').value;
     
         // Определяем итоговый тег
         let finalTag;
@@ -3067,7 +3115,8 @@ class RestaurantOrderApp {
             pack_quantity: packQuantity || '1',
             shelf_life: shelfLife,
             min_stock: minStock,
-            suppliers: supplier
+            suppliers: supplier,
+            department: department
         });
     }
     
@@ -3122,6 +3171,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
