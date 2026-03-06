@@ -204,7 +204,12 @@ class RestaurantOrderApp {
             this.enableUI();
         }
     }
-
+    
+    isLoadingActive() {
+        const overlay = document.getElementById('loadingOverlay');
+        return overlay && overlay.classList.contains('active');
+    }
+    
     // Блокировка всех интерактивных элементов
     disableUI() {
         const interactiveElements = document.querySelectorAll('.action-card, .template-card, .btn, .back-btn');
@@ -317,9 +322,16 @@ class RestaurantOrderApp {
                 isAdmin: loginResult.user.isAdmin || false
             };
             
-            // после установки this.currentUser
             await this.syncData();
-            await this.loadAllCachedData();  // загружает из localStorage в память
+            await this.loadAllCachedData();
+            
+            // Убедимся, что overlay активен перед приветствием
+            if (!this.isLoadingActive()) {
+                this.showLoading(`Добро пожаловать, ${this.currentUser.name}!`);
+            } else {
+                const loadingText = document.getElementById('loadingText');
+                if (loadingText) loadingText.textContent = `Добро пожаловать, ${this.currentUser.name}!`;
+            }
             
             // Преобразуем admin значение в строку и приводим к верхнему регистру
             const adminValue = String(this.currentUser.isAdmin).trim().toUpperCase();
@@ -328,8 +340,6 @@ class RestaurantOrderApp {
             this.isAdmin = (adminValue === 'TRUE' || adminValue === 'SUPER' || adminValue === '1' || adminValue === 'YES');
             this.isSuperAdmin = (adminValue === 'SUPER');
             
-            // Показываем приветствие (гарантируем, что overlay активен)
-            this.showLoading(`Добро пожаловать, ${this.currentUser.name}!`);
             this.showSuccess(`Добро пожаловать, ${this.currentUser.name}!`, () => {
                 this.renderScreen('main', null, true);
             });
@@ -2703,6 +2713,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
