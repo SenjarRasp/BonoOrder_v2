@@ -123,7 +123,37 @@ class RestaurantOrderApp {
       localStorage.removeItem('app_isAdmin');
       localStorage.removeItem('app_isSuperAdmin');
     }
-      
+
+    getTableChanges() {
+        if (!this.table) return { updated: [], added: [], deleted: [] };
+        
+        // Tabulator 5: getDataChanges() возвращает объект с массивами updated, added, deleted
+        if (typeof this.table.getDataChanges === 'function') {
+            const changes = this.table.getDataChanges();
+            // Если вернулся объект (Tabulator 5)
+            if (changes && typeof changes === 'object' && !Array.isArray(changes)) {
+                return changes;
+            }
+            // Если вернулся массив (Tabulator 4)
+            if (Array.isArray(changes)) {
+                const result = { updated: [], added: [], deleted: [] };
+                changes.forEach(change => {
+                    if (change.type === 'updated') result.updated.push(change.data);
+                    else if (change.type === 'added') result.added.push(change.data);
+                    else if (change.type === 'deleted') result.deleted.push(change.data);
+                });
+                return result;
+            }
+        }
+        
+        // Альтернативный метод для некоторых версий
+        if (typeof this.table.getChanges === 'function') {
+            return this.table.getChanges();
+        }
+        
+        return { updated: [], added: [], deleted: [] };
+    }
+    
     async loadAllCachedData(force = false) {
       // Если уже загружено и не форсируем, выходим
       if (this._dataLoaded && !force) return;
@@ -1015,7 +1045,7 @@ class RestaurantOrderApp {
         if (!this.table) return;
     
         // Получаем все изменения
-        const changes = this.table.getDataChanges();
+        const changes = this.getTableChanges();
         if (!changes.updated.length && !changes.added.length && !changes.deleted.length) {
             this.showNotification('info', 'Нет изменений для сохранения');
             return;
@@ -3179,6 +3209,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
