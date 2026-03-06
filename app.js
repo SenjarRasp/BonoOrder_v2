@@ -365,6 +365,7 @@ class RestaurantOrderApp {
     // Обработка логина
     async handleLogin(phone, password) {
         try {
+            this.disableUI();                 // блокируем UI
             this.showLoading('Вход в систему...');
             const loginResult = await this.apiCall('login', { phone, password });
            
@@ -402,6 +403,8 @@ class RestaurantOrderApp {
         } catch (error) {
             this.hideLoading();
             this.showNotification('error', error.message);
+        } finally {
+            this.enableUI();               // разблокируем UI в любом случае
         }
     }
 
@@ -525,9 +528,6 @@ class RestaurantOrderApp {
     // API вызов
     async apiCall(action, data = {}) {
         console.log('📡 API Call:', action, data);
-
-        // Блокируем UI перед запросом
-        this.disableUI();
         
         try {
             // Добавляем небольшую задержку между запросами
@@ -564,8 +564,6 @@ class RestaurantOrderApp {
             
             throw new Error('Ошибка соединения: ' + error.message);
         } finally {
-            // Всегда разблокируем UI после завершения запроса
-            this.hideLoading();
         }
     }
 
@@ -2763,6 +2761,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
