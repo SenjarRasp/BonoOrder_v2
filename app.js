@@ -329,7 +329,7 @@ class RestaurantOrderApp {
             // Показываем приветствие (гарантируем, что overlay активен)
             this.showLoading(`Добро пожаловать, ${this.currentUser.name}!`);
             this.showSuccess(`Добро пожаловать, ${this.currentUser.name}!`, () => {
-                this.renderScreen('main');
+                this.renderScreen('main', null, true);
             });
             
         } catch (error) {
@@ -605,18 +605,20 @@ class RestaurantOrderApp {
     }    
 
     // Рендер экранов
-    renderScreen(screenName, data = null) {
+    renderScreen(screenName, data = null, skipAnimation = false) {
         this.currentScreen = screenName;
         const app = document.getElementById('app');
         
-        const isBackNavigation = screenName === 'main' || screenName === 'template_selection';
-        const exitAnimation = isBackNavigation ? 'screen-exit-back' : 'screen-exit';
-        
-        if (app.children.length > 0) {
-            const currentScreen = app.children[0];
-            currentScreen.classList.add(exitAnimation);
+        if (!skipAnimation) {
+            const isBackNavigation = screenName === 'main' || screenName === 'template_selection';
+            const exitAnimation = isBackNavigation ? 'screen-exit-back' : 'screen-exit';
+            if (app.children.length > 0) {
+                const currentScreen = app.children[0];
+                currentScreen.classList.add(exitAnimation);
+            }
         }
         
+        const delay = skipAnimation ? 0 : 300;
         setTimeout(() => {
             let screenHTML = '';
             switch(screenName) {
@@ -656,7 +658,7 @@ class RestaurantOrderApp {
             }
             
             app.innerHTML = screenHTML;
-
+    
             if (screenName === 'order_creation') {
                 this.initToggleSwitch();
             }
@@ -671,7 +673,7 @@ class RestaurantOrderApp {
                 }, 100);
             }
             
-        }, 300);
+        }, delay);
     }
     
     // Рендер экрана добавления товара
@@ -2699,6 +2701,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
