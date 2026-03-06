@@ -31,6 +31,11 @@ class RestaurantOrderApp {
           this.renderScreen('main');
           // Также можно проверить и восстановить черновик позже, когда пользователь захочет создать новую заявку
         }
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.update(); // проверяет обновления при каждой загрузке
+          });
+        }
     }
 
     init() {
@@ -2845,6 +2850,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
