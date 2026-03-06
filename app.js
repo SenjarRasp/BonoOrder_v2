@@ -805,13 +805,19 @@ class RestaurantOrderApp {
                 case 'order_creation':
                     screenHTML = this.renderOrderCreationScreen(data);
                     break;
+                case 'edit_products':
+                    screenHTML = this.renderEditProductsScreen();
+                    break;
                 case 'order_history':
                     screenHTML = this.renderOrderHistoryScreen();
                     break;
             }
             
             app.innerHTML = screenHTML;
-    
+            
+            if (screenName === 'edit_products') {
+                setTimeout(() => this.initProductsTable(), 100);
+            }
             if (screenName === 'order_creation') {
                 this.initToggleSwitch();
             }
@@ -827,6 +833,195 @@ class RestaurantOrderApp {
             }
             
         }, delay);
+    }
+
+    renderEditProductsScreen() {
+        return `
+            <div class="main-screen screen-transition">
+                <header class="header">
+                    <button class="back-btn" onclick="app.renderScreen('main')">◀️ Назад</button>
+                    <h1>Редактирование товаров</h1>
+                </header>
+                <div id="products-table" style="height: 70vh; width: 100%; overflow: auto;"></div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn primary" onclick="app.saveProductsTable()">💾 Сохранить все</button>
+                    <button class="btn secondary" onclick="app.addProductRow()">➕ Добавить строку</button>
+                    <button class="btn" onclick="app.table.clearFilter()">🗑️ Сбросить фильтры</button>
+                </div>
+                <div id="editProductsStatus" class="status"></div>
+            </div>
+        `;
+    }
+
+    initProductsTable() {
+        const container = document.getElementById('products-table');
+        if (!container) return;
+    
+        // Подготовка данных: преобразуем cachedProducts в формат для таблицы
+        const tableData = this.cachedProducts.map(p => ({
+            id: p.id,
+            name: p.name || '',
+            product_tags: p.product_tags || '',
+            unit: p.unit || '',
+            pack_quantity: p.pack_quantity || 1,
+            shelf_life: p.shelf_life || '',
+            min_stock: p.min_stock || 0,
+            supplier: p.supplier || ''
+        }));
+    
+        this.table = new Tabulator(container, {
+            data: tableData,
+            layout: 'fitColumns',
+            placeholder: 'Нет данных',
+            columns: [
+                { title: 'ID', field: 'id', visible: false },
+                { 
+                    title: 'Название', 
+                    field: 'name', 
+                    editor: 'input', 
+                    headerFilter: 'input',
+                    validator: ['required', 'string']
+                },
+                { 
+                    title: 'Теги', 
+                    field: 'product_tags', 
+                    editor: 'input', 
+                    headerFilter: 'input',
+                    tooltip: true 
+                },
+                { 
+                    title: 'Ед. изм.', 
+                    field: 'unit', 
+                    editor: 'input', 
+                    width: 80,
+                    validator: ['required']
+                },
+                { 
+                    title: 'Шаг', 
+                    field: 'pack_quantity', 
+                    editor: 'number', 
+                    width: 70,
+                    validator: ['required', 'numeric', 'min:0.01']
+                },
+                { 
+                    title: 'Срок годности', 
+                    field: 'shelf_life', 
+                    editor: 'number', 
+                    width: 100,
+                    validator: ['numeric', 'min:0']
+                },
+                { 
+                    title: 'Мин. запас', 
+                    field: 'min_stock', 
+                    editor: 'number', 
+                    width: 100,
+                    validator: ['required', 'numeric', 'min:0']
+                },
+                { 
+                    title: 'Поставщики', 
+                    field: 'supplier', 
+                    editor: 'input', 
+                    headerFilter: 'input',
+                    tooltip: true 
+                },
+                {
+                    title: 'Действия',
+                    formatter: 'buttonCross',
+                    width: 70,
+                    cellClick: (e, cell) => {
+                        const row = cell.getRow();
+                        if (confirm('Удалить строку?')) {
+                            row.delete();
+                        }
+                    }
+                }
+            ],
+            reactiveData: true,
+            selectable: true,
+            clipboard: true,                // поддержка копирования/вставки из Excel
+            clipboardPasteAction: 'update', // вставленные данные обновят ячейки
+            clipboardPasteParser: 'table',  // парсить как таблицу
+            history: true,                   // поддержка undo/redo
+            movableColumns: true,
+            resizableColumns: true
+        });
+    
+        // Сохраняем экземпляр таблицы в app для доступа из других методов
+    }
+
+    addProductRow() {
+        if (!this.table) return;
+        this.table.addRow({
+            id: 'new_' + Date.now(), // временный ID
+            name: '',
+            product_tags: '',
+            unit: 'шт',
+            pack_quantity: 1,
+            shelf_life: '',
+            min_stock: 1,
+            supplier: ''
+        }, true); // true - добавить в начало
+    }
+
+    async saveProductsTable() {
+        if (!this.table) return;
+    
+        // Получаем все изменения
+        const changes = this.table.getChanges();
+        if (!changes.updated.length && !changes.added.length && !changes.deleted.length) {
+            this.showNotification('info', 'Нет изменений для сохранения');
+            return;
+        }
+    
+        this.disableUI();
+        this.showLoading('Сохранение...');
+    
+        try {
+            // Преобразуем данные: удаляем временные ID у новых строк и готовим payload
+            const payload = {
+                updated: changes.updated.map(row => ({
+                    id: row.id,
+                    name: row.name,
+                    product_tags: row.product_tags,
+                    unit: row.unit,
+                    pack_quantity: row.pack_quantity,
+                    shelf_life: row.shelf_life,
+                    min_stock: row.min_stock,
+                    supplier: row.supplier
+                })),
+                added: changes.added.map(row => ({
+                    name: row.name,
+                    product_tags: row.product_tags,
+                    unit: row.unit,
+                    pack_quantity: row.pack_quantity,
+                    shelf_life: row.shelf_life,
+                    min_stock: row.min_stock,
+                    supplier: row.supplier
+                })),
+                deleted: changes.deleted.map(row => row.id)
+            };
+    
+            // Отправляем на сервер
+            const result = await this.apiCall('bulk_update_products', payload);
+    
+            // Сброс кэша
+            this.cachedProducts = [];
+            this.cachedTags = null;
+            this._dataLoaded = false;
+            localStorage.removeItem('cache_Products');
+            localStorage.removeItem('cache_ProductFormData');
+            localStorage.removeItem('cache_versions');
+    
+            this.showSuccess('Товары сохранены!');
+            setTimeout(() => {
+                this.renderScreen('main');
+            }, 2000);
+        } catch (error) {
+            this.hideLoading();
+            this.showNotification('error', 'Ошибка сохранения: ' + error.message);
+        } finally {
+            this.enableUI();
+        }
     }
     
     // Рендер экрана добавления товара
@@ -964,6 +1159,14 @@ class RestaurantOrderApp {
     // Рендер главного экрана
     renderMainScreen() {
         const adminActions = this.isAdmin ? `
+            <div class="action-card" onclick="app.handleMainAction('edit_products')">
+                <div class="action-content">
+                    <div class="action-icon">📝</div>
+                    <h3>Редактировать товары</h3>
+                    <p>Массовое редактирование в таблице</p>
+                </div>
+            </div>
+            
             <div class="action-card" onclick="app.handleMainAction('add_product')">
                 <div class="action-content">
                     <div class="action-icon">➕</div>
@@ -1062,6 +1265,12 @@ class RestaurantOrderApp {
             </div>
         `;
     }
+
+    async showEditProductsScreen() {
+        await this.loadAllCachedData(); // убеждаемся, что данные загружены
+        this.renderScreen('edit_products');
+    }
+    
     // Обработчик действий на главной странице
     handleMainAction(action) {
         const card = event.currentTarget;
@@ -1076,7 +1285,11 @@ class RestaurantOrderApp {
                 case 'history':
                     this.loadOrderHistory();
                     break;
-                
+
+                case 'edit_products':
+                    this.showEditProductsScreen();
+                    break;
+                    
                 case 'add_product':
                     this.showAddProductScreen();
                     break;
@@ -2909,6 +3122,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
