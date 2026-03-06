@@ -7,6 +7,8 @@ class RestaurantOrderApp {
         this.cachedProducts = [];
         this.cachedSuppliers = [];
         this.cachedTemplates = [];
+        this.cachedUsers = [];
+        this.cachedTags = null;
         this._dataLoaded = false; // флаг для однократной загрузки
         this.apiUrl = 'https://script.google.com/macros/s/AKfycbzpAuZ1AU--_zED2-k_wTHeEqXxdXG8WDko7rhD2HihX6rlXoDAlL0LxsPMyHwQpqN0Qw/exec';
         this.currentUser = null;
@@ -166,7 +168,6 @@ class RestaurantOrderApp {
     
     // Метод для изменения способа группировки
     changeGroupBy(groupBy) {
-        this.saveCurrentFormData();
         this.currentGroupBy = groupBy;
         // Перерисовываем экран с новым способом группировки
         this.renderScreen('order_creation', {
@@ -309,8 +310,6 @@ class RestaurantOrderApp {
             await this.syncData();
             await this.loadAllCachedData();  // загружает из localStorage в память
             
-            this.showSuccess(`Добро пожаловать, ${this.currentUser.name}!`);
-            setTimeout(() => this.renderScreen('main'), 2000);
             // Преобразуем admin значение в строку и приводим к верхнему регистру
             const adminValue = String(this.currentUser.isAdmin).trim().toUpperCase();
             console.log('Admin value normalized:', adminValue);
@@ -406,7 +405,6 @@ class RestaurantOrderApp {
         
         try {
             // СОХРАНЯЕМ ДАННЫЕ ПЕРЕД ОТПРАВКОЙ
-            this.saveCurrentFormData();
             this.disableUI(); // Блокируем UI перед отправкой
             const items = this.collectOrderItems();
             if (items.length === 0) {
@@ -1025,27 +1023,38 @@ class RestaurantOrderApp {
     }
     // Новые методы для удаления товаров
     async showDeleteProductScreen() {
-        let productsData = this.getCachedData('Products');
-        let formData = this.getCachedData('ProductFormData'); // если кэшируем и это
-        
-        if (!productsData || !formData) {
-          // если нет в кэше, загружаем с сервера
-          this.showLoading('Загрузка товаров...');
-          const [pResult, fResult] = await Promise.all([
-              this.apiCall('get_all_products'),
-              this.apiCall('get_product_form_data')
-          ]);
-          productsData = pResult;
-          formData = fResult;
-          this.saveCachedData('Products', pResult);
-          this.saveCachedData('ProductFormData', fResult);
-          this.hideLoading();
+      // Убеждаемся, что товары загружены в память
+      if (this.cachedProducts.length === 0) {
+        await this.loadAllCachedData();
+      }
+    
+      // Получаем теги из кэша (память -> localStorage -> сервер)
+      let tags = this.cachedTags;
+      if (!tags) {
+        const formData = this.getCachedData('ProductFormData');
+        if (formData && formData.tags) {
+          tags = formData.tags;
+          this.cachedTags = tags;
+        } else {
+          this.showLoading('Загрузка тегов...');
+          try {
+            const formData = await this.apiCall('get_product_form_data');
+            tags = formData.tags || [];
+            this.saveCachedData('ProductFormData', formData);
+            this.cachedTags = tags;
+          } catch (error) {
+            console.error('Ошибка загрузки тегов:', error);
+            tags = [];
+          } finally {
+            this.hideLoading();
+          }
         }
-        
-        this.renderScreen('delete_product', { 
-          products: productsData.products || [], 
-          tags: formData.tags || [] 
-        });
+      }
+    
+      this.renderScreen('delete_product', {
+        products: this.cachedProducts,
+        tags: tags
+      });
     }
     // Обновленный renderDeleteProductScreen с правильным расположением поиска
     renderDeleteProductScreen(data) {
@@ -1285,6 +1294,7 @@ class RestaurantOrderApp {
             await this.apiCall('delete_products', { productIds: selectedProducts });
 
             this.cachedProducts = [];
+            this.cachedTags = null;
             localStorage.removeItem('cache_Products');
             localStorage.removeItem('cache_ProductFormData');
             localStorage.removeItem('cache_versions');
@@ -1702,30 +1712,6 @@ class RestaurantOrderApp {
         tagsSelect.selectedIndex = -1;
     }
     
-    // Добавим инициализацию выбранных тегов при загрузке экрана
-    async showTemplatesManagementScreen() {
-        try {
-            this.showLoading('Загрузка шаблонов...');
-            const result = await this.apiCall('get_all_templates');
-            const formData = await this.apiCall('get_product_form_data');
-            this.hideLoading();
-            
-            const templates = result.templates || [];
-            const tags = formData.tags || [];
-            
-            this.renderScreen('manage_templates', { templates, tags });
-            
-            // Инициализируем выбранные теги после рендера
-            setTimeout(() => {
-                this.initTemplateTagsSelection(templates);
-            }, 100);
-            
-        } catch (error) {
-            this.hideLoading();
-            this.showNotification('error', 'Ошибка загрузки: ' + error.message);
-        }
-    }
-    
     // Метод для инициализации выбранных тегов в существующих шаблонах
     initTemplateTagsSelection(templates) {
         templates.forEach(template => {
@@ -2078,6 +2064,7 @@ class RestaurantOrderApp {
             const result = await this.apiCall('add_product', productData);
 
             this.cachedProducts = [];
+            this.cachedTags = null;
             localStorage.removeItem('cache_Products');
             localStorage.removeItem('cache_ProductFormData');
             localStorage.removeItem('cache_versions');
@@ -2188,12 +2175,6 @@ class RestaurantOrderApp {
                 <div id="orderStatus" class="status"></div>
             </div>
         `;
-    }
-    // Новый метод для обработки выхода из экрана заявки
-    handleBackFromOrder() {
-        // Сохраняем данные перед уходом
-        this.saveCurrentFormData();
-        this.renderScreen('template_selection');
     }
     // Рендер товаров по поставщикам (существующая логика)
     renderProductsBySupplier(products) {
@@ -2697,6 +2678,7 @@ class RestaurantOrderApp {
         this.ordersHistory = [];
         this.availableTemplates = [];
         this.cachedProducts = [];
+        this.cachedTags = null;
         this.cachedSuppliers = [];
         this.cachedTemplates = [];
         this.cachedUsers = [];
@@ -2708,6 +2690,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
