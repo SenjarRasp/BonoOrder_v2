@@ -89,6 +89,61 @@ class RestaurantOrderApp {
         throw error;
       }
     }
+
+    showNotification(type, message, duration = 3000) {
+      // Контейнер для уведомлений (создаётся при первом вызове)
+      let toastContainer = document.getElementById('toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 10001;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        `;
+        document.body.appendChild(toastContainer);
+      }
+    
+      // Создание уведомления
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      toast.style.cssText = `
+        background: ${type === 'error' ? '#f44336' : type === 'success' ? '#4caf50' : '#2196f3'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease;
+        min-width: 200px;
+        max-width: 300px;
+        word-wrap: break-word;
+      `;
+    
+      toastContainer.appendChild(toast);
+    
+      // Анимация появления
+      setTimeout(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(0)';
+      }, 10);
+    
+      // Автоматическое скрытие через duration
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          if (toast.parentNode) toast.remove();
+          if (toastContainer.children.length === 0) toastContainer.remove();
+        }, 300);
+      }, duration);
+    }
     
     loadCachedVersions() {
         const versions = localStorage.getItem('cache_versions');
@@ -2713,6 +2768,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
