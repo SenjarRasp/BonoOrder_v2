@@ -528,6 +528,7 @@ class RestaurantOrderApp {
             filteredProducts.push({
               name: product.name,
               unit: product.unit || 'шт',
+              pack_quantity: parseFloat(product.pack_quantity) || 1, // как число
               supplier: supplier,
               shelf_life: product.shelf_life || '',
               min_stock: product.min_stock || 0,
@@ -850,7 +851,11 @@ class RestaurantOrderApp {
                         <label>Название товара *</label>
                         <input type="text" id="productName" required>
                     </div>
-                    
+                    <div class="input-group">
+                        <label>Шаг упаковки *</label>
+                        <input type="number" id="productPackQuantity" required min="0.1" step="0.1" value="1">
+                        <small>На сколько изменяется количество при нажатии +/-</small>
+                    </div>
                     <div class="input-group">
                         <label>Теги *</label>
                         <select id="productTags" required>
@@ -2404,6 +2409,35 @@ class RestaurantOrderApp {
         
         return productsHtml;
     }
+
+    // Новые методы для изменения количества
+    incrementQuantity(productName, supplier, step) {
+        const key = `${productName}|${supplier}`;
+        if (!this.currentOrderData[key]) this.currentOrderData[key] = { quantity: 0, comment: '' };
+        const current = this.currentOrderData[key].quantity || 0;
+        const newValue = current + step;
+        this.currentOrderData[key].quantity = newValue;
+        
+        // Обновляем input на странице
+        const input = document.querySelector(`.quantity-input[data-product-name="${productName}"][data-supplier="${supplier}"]`);
+        if (input) input.value = newValue;
+        
+        this.saveOrderDraft();
+    }
+    
+    decrementQuantity(productName, supplier, step) {
+        const key = `${productName}|${supplier}`;
+        if (!this.currentOrderData[key]) this.currentOrderData[key] = { quantity: 0, comment: '' };
+        const current = this.currentOrderData[key].quantity || 0;
+        const newValue = Math.max(0, current - step);
+        this.currentOrderData[key].quantity = newValue;
+        
+        const input = document.querySelector(`.quantity-input[data-product-name="${productName}"][data-supplier="${supplier}"]`);
+        if (input) input.value = newValue;
+        
+        this.saveOrderDraft();
+    }
+    
     // Вынесенный метод рендера одного товара (для переиспользования)
     // Улучшенная версия renderProductItem с цветовыми индикаторами
     renderProductItem(product) {
@@ -2411,6 +2445,7 @@ class RestaurantOrderApp {
         const savedData = this.currentOrderData[key] || {};
         const savedQuantity = savedData.quantity || 0;
         const savedComment = savedData.comment || '';
+        const step = product.pack_quantity || 1;
         
         // Формируем дополнительную информацию с иконками и стилями
         const additionalInfo = [];
@@ -2433,27 +2468,34 @@ class RestaurantOrderApp {
         
         // Основная информация о товаре
         const mainInfo = `${product.unit} • ${product.supplier}`;
+
+        // Экранируем кавычки для onclick
+        const productNameEscaped = product.name.replace(/'/g, "\\'");
+        const supplierEscaped = product.supplier.replace(/'/g, "\\'");
         
         return `
             <div class="product-item">
                 <div class="product-info">
                     <div class="product-name">${product.name}</div>
                     <div class="product-details" style="font-size: 12px; color: #7f8c8d;">
-                        ${mainInfo}
-                        ${additionalInfo.length > 0 ? 
-                            `<div style="margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px;">${additionalInfo.join('')}</div>` : 
-                            ''
-                        }
+                        ${product.unit} • ${product.supplier}
+                        ${product.shelf_life ? `<span>🕒 ${product.shelf_life}д</span>` : ''}
+                        ${product.min_stock ? `<span>📦 мин. ${product.min_stock}</span>` : ''}
                     </div>
                 </div>
-                <input type="number" 
-                       class="quantity-input" 
-                       min="0" 
-                       value="${savedQuantity}"
-                       data-product-name="${product.name}"
-                       data-product-unit="${product.unit}"
-                       data-supplier="${product.supplier}"
-                       placeholder="0">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <button class="quantity-btn" onclick="app.decrementQuantity('${productNameEscaped}', '${supplierEscaped}', ${step})">−</button>
+                    <input type="number" 
+                           class="quantity-input" 
+                           min="0" 
+                           step="${step}"
+                           value="${savedQuantity}"
+                           data-product-name="${product.name}"
+                           data-product-unit="${product.unit}"
+                           data-supplier="${product.supplier}"
+                           placeholder="0">
+                    <button class="quantity-btn" onclick="app.incrementQuantity('${productNameEscaped}', '${supplierEscaped}', ${step})">+</button>
+                </div>
                 <input type="text" 
                        class="comment-input" 
                        placeholder="Комментарий"
@@ -2764,6 +2806,7 @@ class RestaurantOrderApp {
         const selectedTag = document.getElementById('productTags').value;
         const customTag = document.getElementById('customTag').value;
         const unit = document.getElementById('productUnit').value;
+        const packQuantity = document.getElementById('productPackQuantity').value;
         const shelfLife = document.getElementById('productShelfLife').value;
         const minStock = document.getElementById('productMinStock').value;
         const supplier = document.getElementById('productSupplier').value;
@@ -2793,6 +2836,7 @@ class RestaurantOrderApp {
             name,
             product_tags: finalTag,
             unit,
+            pack_quantity: packQuantity || '1',
             shelf_life: shelfLife,
             min_stock: minStock,
             suppliers: supplier
@@ -2850,6 +2894,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
