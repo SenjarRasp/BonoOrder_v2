@@ -241,8 +241,10 @@ class RestaurantOrderApp {
             `;
             
             setTimeout(() => {
-                this.hideLoading();
+                // Сначала рендерим новый экран (под overlay'ем)
                 if (callback) callback();
+                // Затем скрываем overlay
+                this.hideLoading();
             }, 2000);
         }
     }
@@ -2701,6 +2703,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
