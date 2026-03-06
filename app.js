@@ -449,8 +449,6 @@ class RestaurantOrderApp {
                 templates: loginResult.user.templates,
                 isAdmin: loginResult.user.isAdmin || false
             };
-
-            this.saveUserSession();
             
             await this.syncData();
             await this.loadAllCachedData();
@@ -469,6 +467,8 @@ class RestaurantOrderApp {
             // Проверяем права одним условием
             this.isAdmin = (adminValue === 'TRUE' || adminValue === 'SUPER' || adminValue === '1' || adminValue === 'YES');
             this.isSuperAdmin = (adminValue === 'SUPER');
+
+            this.saveUserSession();
             
             this.showSuccess(`Добро пожаловать, ${this.currentUser.name}!`, () => {
                 this.renderScreen('main', null, true);
@@ -2827,6 +2827,7 @@ class RestaurantOrderApp {
     }
     // Выход из системы
     logout() {
+        this.hideLoading(); 
         this.clearUserSession();
         this.currentUser = null;
         this.ordersHistory = [];
@@ -2844,6 +2845,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
