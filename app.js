@@ -1295,6 +1295,7 @@ class RestaurantOrderApp {
 
             this.cachedProducts = [];
             this.cachedTags = null;
+            this._dataLoaded = false;
             localStorage.removeItem('cache_Products');
             localStorage.removeItem('cache_ProductFormData');
             localStorage.removeItem('cache_versions');
@@ -1451,6 +1452,7 @@ class RestaurantOrderApp {
             await this.apiCall('delete_suppliers', { supplierIds: selectedSuppliers });
 
             this.cachedSuppliers = [];
+            this._dataLoaded = false;
             localStorage.removeItem('cache_Suppliers');
             localStorage.removeItem('cache_versions');
             
@@ -1627,6 +1629,7 @@ class RestaurantOrderApp {
             });
             
             this.cachedTemplates = [];
+            this._dataLoaded = false;
             localStorage.removeItem('cache_Templates');
             localStorage.removeItem('cache_versions');
             
@@ -1674,6 +1677,7 @@ class RestaurantOrderApp {
             
 
             this.cachedTemplates = [];
+            this._dataLoaded = false;
             localStorage.removeItem('cache_Templates');
             localStorage.removeItem('cache_versions');
             
@@ -1737,6 +1741,7 @@ class RestaurantOrderApp {
             await this.apiCall('delete_template', { templateId });
             
             this.cachedTemplates = [];
+            this._dataLoaded = false;
             localStorage.removeItem('cache_Templates');
             localStorage.removeItem('cache_versions');
             
@@ -1983,6 +1988,7 @@ class RestaurantOrderApp {
             });
 
             this.cachedUsers = [];
+            this._dataLoaded = false;
             localStorage.removeItem('cache_Users');
             localStorage.removeItem('cache_versions');
             
@@ -2024,6 +2030,7 @@ class RestaurantOrderApp {
             });
 
             this.cachedUsers = [];
+            this._dataLoaded = false;
             localStorage.removeItem('cache_Users');
             localStorage.removeItem('cache_versions');
             
@@ -2045,6 +2052,7 @@ class RestaurantOrderApp {
             await this.apiCall('delete_user', { userPhone });
             
             this.cachedUsers = [];
+            this._dataLoaded = false;
             localStorage.removeItem('cache_Users');
             localStorage.removeItem('cache_versions');
             
@@ -2065,6 +2073,7 @@ class RestaurantOrderApp {
 
             this.cachedProducts = [];
             this.cachedTags = null;
+            this._dataLoaded = false;
             localStorage.removeItem('cache_Products');
             localStorage.removeItem('cache_ProductFormData');
             localStorage.removeItem('cache_versions');
@@ -2094,6 +2103,7 @@ class RestaurantOrderApp {
             const result = await this.apiCall('add_supplier', data);
 
             this.cachedSuppliers = [];
+            this._dataLoaded = false;
             localStorage.removeItem('cache_Suppliers');
             localStorage.removeItem('cache_versions');
             
@@ -2690,6 +2700,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
