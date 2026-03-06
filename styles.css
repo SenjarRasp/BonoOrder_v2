@@ -29,7 +29,27 @@ body {
 .input-group {
     margin-bottom: 20px;
 }
-
+.quantity-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #ddd;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.quantity-btn:hover {
+    background: #e9ecef;
+    border-color: #3498db;
+}
+.quantity-btn:active {
+    transform: scale(0.95);
+}
 .input-group label {
     display: block;
     margin-bottom: 8px;
@@ -1652,3 +1672,4 @@ select[multiple] option:checked {
     border-color: #bee5eb !important;
     color: #0c5460 !important;
 }
+
