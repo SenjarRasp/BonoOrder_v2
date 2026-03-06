@@ -2411,11 +2411,18 @@ class RestaurantOrderApp {
     }
 
     // Новые методы для изменения количества
+
+    roundToStep(value, step) {
+        const stepStr = step.toString();
+        const decimals = stepStr.includes('.') ? stepStr.split('.')[1].length : 0;
+        return parseFloat(value.toFixed(decimals));
+    }
+    
     incrementQuantity(productName, supplier, step) {
         const key = `${productName}|${supplier}`;
         if (!this.currentOrderData[key]) this.currentOrderData[key] = { quantity: 0, comment: '' };
         const current = this.currentOrderData[key].quantity || 0;
-        const newValue = current + step;
+        let newValue = this.roundToStep(current + step, step);
         this.currentOrderData[key].quantity = newValue;
         
         // Обновляем input на странице
@@ -2429,7 +2436,7 @@ class RestaurantOrderApp {
         const key = `${productName}|${supplier}`;
         if (!this.currentOrderData[key]) this.currentOrderData[key] = { quantity: 0, comment: '' };
         const current = this.currentOrderData[key].quantity || 0;
-        const newValue = Math.max(0, current - step);
+        let newValue = this.roundToStep(Math.max(0, current - step), step);
         this.currentOrderData[key].quantity = newValue;
         
         const input = document.querySelector(`.quantity-input[data-product-name="${productName}"][data-supplier="${supplier}"]`);
@@ -2894,6 +2901,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
