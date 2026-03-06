@@ -1446,7 +1446,7 @@ class RestaurantOrderApp {
         if (!userConfirmed) {
             return;
         }
-    
+        this.disableUI();
         try {
             this.showLoading('Удаление товаров...');
             await this.apiCall('delete_products', { productIds: selectedProducts });
@@ -1604,7 +1604,7 @@ class RestaurantOrderApp {
         if (!userConfirmed) {
             return;
         }
-    
+        this.disableUI();
         try {
             this.showLoading('Удаление поставщиков...');
             await this.apiCall('delete_suppliers', { supplierIds: selectedSuppliers });
@@ -1761,6 +1761,8 @@ class RestaurantOrderApp {
     
     // Исправленный метод обновления шаблона
     async updateTemplate(templateId) {
+        this.disableUI();
+        
         const name = document.getElementById(`name_${templateId}`).value;
         const type = document.getElementById(`type_${templateId}`).value;
         
@@ -1803,6 +1805,8 @@ class RestaurantOrderApp {
     
     // Исправленный метод добавления шаблона
     async addNewTemplate() {
+        this.disableUI();
+        
         const name = document.getElementById('newTemplateName').value;
         const type = document.getElementById('newTemplateType').value;
         
@@ -1893,7 +1897,7 @@ class RestaurantOrderApp {
         if (!userConfirmed) {
             return;
         }
-    
+        this.disableUI();
         try {
             this.showLoading('Удаление шаблона...');
             await this.apiCall('delete_template', { templateId });
@@ -2114,7 +2118,8 @@ class RestaurantOrderApp {
     
     // Исправленный метод добавления пользователя
     async addNewUser() {
-    const phone = document.getElementById('newUserPhone').value;
+        this.disableUI();
+        const phone = document.getElementById('newUserPhone').value;
         const name = document.getElementById('newUserName').value;
         const password = document.getElementById('newUserPassword').value;
         const department = document.getElementById('newUserDepartment').value;
@@ -2161,6 +2166,7 @@ class RestaurantOrderApp {
     }
     // Исправленный метод обновления пользователя
     async updateUser(userPhone) {
+        this.disableUI();
         const name = document.getElementById(`name_${userPhone}`).value;
         const password = document.getElementById(`password_${userPhone}`).value;
         const department = document.getElementById(`department_${userPhone}`).value;
@@ -2204,7 +2210,9 @@ class RestaurantOrderApp {
         if (!userConfirmed) {
             return;
         }
-    
+        
+        this.disableUI();
+        
         try {
             this.showLoading('Удаление пользователя...');
             await this.apiCall('delete_user', { userPhone });
@@ -2901,6 +2909,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
