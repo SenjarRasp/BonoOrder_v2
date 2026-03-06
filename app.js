@@ -1049,8 +1049,11 @@ class RestaurantOrderApp {
 
     this.table.on('rowDeleted', (row) => {
         const data = row.getData();
+        console.log('Row deleted:', data); // для отладки
         if (data.id && !String(data.id).startsWith('new_')) {
             this._deletedRows.push(data.id);
+            // удалить из _updatedRows, если строка была ранее отредактирована
+            this._updatedRows = this._updatedRows.filter(r => r.id !== data.id);
         } else {
             // Удаляем несохранённую строку из _addedRows
             this._addedRows = this._addedRows.filter(r => r.id !== data.id);
@@ -1136,7 +1139,7 @@ class RestaurantOrderApp {
                     supplier: row.supplier,
                     department: row.department
                 })),
-                deleted: changes.deleted.map(row => row.id)
+                deleted: changes.deleted
             };
     
             // Отправляем на сервер
