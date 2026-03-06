@@ -10,6 +10,7 @@ class RestaurantOrderApp {
         this.cachedUsers = [];
         this.cachedTags = null;
         this._loadingCounter = 0;
+        this._originalOverlayHTML = null;
         this._dataLoaded = false; // флаг для однократной загрузки
         this.apiUrl = 'https://script.google.com/macros/s/AKfycbw19I8NF1FQDPWiVl4XaNP8P_waWVucEuvmirRTWCCAJmXPBUAidWlXOlXB8ar3NYr6rg/exec';
         this.currentUser = null;
@@ -374,24 +375,35 @@ class RestaurantOrderApp {
         if (this._loadingCounter === 1) {
             const overlay = document.getElementById('loadingOverlay');
             const loadingText = document.getElementById('loadingText');
-            if (overlay && loadingText) {
-                loadingText.textContent = text;
+            if (overlay) {
+                // Сохраняем исходный HTML при первом показе
+                if (!this._originalOverlayHTML) {
+                    this._originalOverlayHTML = overlay.innerHTML;
+                }
+                if (loadingText) {
+                    loadingText.textContent = text;
+                }
                 overlay.classList.add('active');
             }
         } else {
-            // просто обновляем текст
             const loadingText = document.getElementById('loadingText');
             if (loadingText) loadingText.textContent = text;
         }
     }
-
-    // Скрыть анимацию загрузки
+    
     hideLoading() {
         this._loadingCounter--;
         if (this._loadingCounter <= 0) {
             this._loadingCounter = 0;
             const overlay = document.getElementById('loadingOverlay');
-            if (overlay) overlay.classList.remove('active');
+            if (overlay) {
+                // Восстанавливаем исходный HTML, если он был сохранён
+                if (this._originalOverlayHTML) {
+                    overlay.innerHTML = this._originalOverlayHTML;
+                    this._originalOverlayHTML = null;
+                }
+                overlay.classList.remove('active');
+            }
             this.enableUI();
         }
     }
@@ -431,7 +443,7 @@ class RestaurantOrderApp {
         const loadingText = document.getElementById('loadingText');
         
         if (overlay && loadingText) {
-            // Меняем анимацию на успех
+            // Меняем содержимое overlay на анимацию успеха
             overlay.innerHTML = `
                 <div class="loading-text">${message}</div>
                 <div class="success-checkmark">
@@ -447,7 +459,7 @@ class RestaurantOrderApp {
             setTimeout(() => {
                 // Сначала рендерим новый экран (под overlay'ем)
                 if (callback) callback();
-                // Затем скрываем overlay
+                // Затем скрываем overlay (hideLoading восстановит исходный HTML)
                 this.hideLoading();
             }, 2000);
         }
