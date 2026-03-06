@@ -26,6 +26,11 @@ class RestaurantOrderApp {
         this._submitting = false; // для блокировки двойной отправки
         this._loadingHistory = false;
         this.init();
+        if (this.loadUserSession()) {
+          // Если есть сессия, сразу переходим на главный экран
+          this.renderScreen('main');
+          // Также можно проверить и восстановить черновик позже, когда пользователь захочет создать новую заявку
+        }
     }
 
     init() {
@@ -43,10 +48,76 @@ class RestaurantOrderApp {
             } else {
               this.currentOrderData[key].comment = e.target.value;
             }
+            this.saveOrderDraft();
+          }
+        window.addEventListener('beforeunload', () => {
+          // Сохраняем черновик только если находимся на экране создания заявки
+          if (this.currentScreen === 'order_creation') {
+            this.saveOrderDraft();
           }
         });
     }
 
+    // Сохранение сессии пользователя
+    saveUserSession() {
+      if (this.currentUser) {
+        localStorage.setItem('app_currentUser', JSON.stringify(this.currentUser));
+        localStorage.setItem('app_isAdmin', JSON.stringify(this.isAdmin));
+        localStorage.setItem('app_isSuperAdmin', JSON.stringify(this.isSuperAdmin));
+      }
+    }
+    
+    // Загрузка сессии пользователя
+    loadUserSession() {
+      const userData = localStorage.getItem('app_currentUser');
+      if (userData) {
+        this.currentUser = JSON.parse(userData);
+        this.isAdmin = JSON.parse(localStorage.getItem('app_isAdmin') || 'false');
+        this.isSuperAdmin = JSON.parse(localStorage.getItem('app_isSuperAdmin') || 'false');
+        return true;
+      }
+      return false;
+    }
+    
+    // Сохранение черновика заявки
+    saveOrderDraft() {
+      if (this.currentTemplateName && Object.keys(this.currentOrderData).length > 0) {
+        const draft = {
+          templateName: this.currentTemplateName,
+          orderData: this.currentOrderData,
+          groupBy: this.currentGroupBy
+        };
+        localStorage.setItem('app_orderDraft', JSON.stringify(draft));
+      } else {
+        localStorage.removeItem('app_orderDraft');
+      }
+    }
+    
+    // Загрузка черновика заявки
+    loadOrderDraft(templateName) {
+      const draftJson = localStorage.getItem('app_orderDraft');
+      if (!draftJson) return null;
+      const draft = JSON.parse(draftJson);
+      if (draft.templateName === templateName) {
+        return draft;
+      }
+      return null;
+    }
+    
+    // Очистка всех сохранённых данных (при логауте)
+    clearAllStorage() {
+      localStorage.removeItem('app_currentUser');
+      localStorage.removeItem('app_isAdmin');
+      localStorage.removeItem('app_isSuperAdmin');
+      localStorage.removeItem('app_orderDraft');
+    }
+
+    clearUserSession() {
+      localStorage.removeItem('app_currentUser');
+      localStorage.removeItem('app_isAdmin');
+      localStorage.removeItem('app_isSuperAdmin');
+    }
+      
     async loadAllCachedData(force = false) {
       // Если уже загружено и не форсируем, выходим
       if (this._dataLoaded && !force) return;
@@ -377,6 +448,8 @@ class RestaurantOrderApp {
                 templates: loginResult.user.templates,
                 isAdmin: loginResult.user.isAdmin || false
             };
+
+            this.saveUserSession();
             
             await this.syncData();
             await this.loadAllCachedData();
@@ -459,6 +532,12 @@ class RestaurantOrderApp {
     
         this.currentProducts = filteredProducts;
         this.currentTemplateName = templateName;
+        const draft = this.loadOrderDraft(templateName);
+        if (draft) {
+          this.currentOrderData = draft.orderData;
+          this.currentGroupBy = draft.groupBy;
+          // При рендере экрана данные восстановятся автоматически через restoreFormData()
+        }
         this.renderScreen('order_creation', { templateName, products: filteredProducts });
       } catch (error) {
         this.showNotification('error', 'Ошибка загрузки товаров: ' + error.message);
@@ -507,6 +586,8 @@ class RestaurantOrderApp {
             
             // Очищаем сохранённые данные после успешной отправки
             this.currentOrderData = {};
+            // Очищаем черновик
+            localStorage.removeItem('app_orderDraft');
             
             this.showSuccess(`Заявка ${result.order_id} отправлена!`);
             this.enableUI(); // Разблокируем после успешной отправки
@@ -2745,6 +2826,7 @@ class RestaurantOrderApp {
     }
     // Выход из системы
     logout() {
+        this.clearUserSession();
         this.currentUser = null;
         this.ordersHistory = [];
         this.availableTemplates = [];
@@ -2761,6 +2843,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
