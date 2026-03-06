@@ -975,8 +975,8 @@ class RestaurantOrderApp {
             clipboardPasteParser: 'table',  // парсить как таблицу
             history: true,                   // поддержка undo/redo
             movableColumns: true,
-            resizableColumns: true
-                persistence: {
+            resizableColumns: true,
+            persistence: {
                 columns: true,
                 filter: true,
                 sort: true
@@ -3171,6 +3171,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
