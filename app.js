@@ -403,17 +403,25 @@ class RestaurantOrderApp {
     
     // Блокировка всех интерактивных элементов
     disableUI() {
+        console.log('disableUI called'); // для отладки
         const interactiveElements = document.querySelectorAll('.action-card, .template-card, .btn, .back-btn');
         interactiveElements.forEach(element => {
             element.classList.add('disabled', 'loading');
+        if (element.tagName === 'BUTTON' || element.tagName === 'A') {
+            element.disabled = true;
+        }
         });
     }
 
     // Разблокировка всех интерактивных элементов
     enableUI() {
+        console.log('enableUI called'); // для отладки
         const interactiveElements = document.querySelectorAll('.action-card, .template-card, .btn, .back-btn');
         interactiveElements.forEach(element => {
             element.classList.remove('disabled', 'loading');
+        if (element.tagName === 'BUTTON' || element.tagName === 'A') {
+            element.disabled = false;
+        }
         });
     }
     
