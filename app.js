@@ -4,7 +4,7 @@ class RestaurantOrderApp {
             ? '/BonoOrder_v2/' 
             : '/';
         
-        this.apiUrl = 'https://script.google.com/macros/s/AKfycbyrcv-Dtwe3glpEDFyqLwtLSPHub-ZZM-5dxO4Ww2jyiO8OWOPjci-MdBMmFSOzYhGIyQ/exec';
+        this.apiUrl = 'https://script.google.com/macros/s/AKfycbzpAuZ1AU--_zED2-k_wTHeEqXxdXG8WDko7rhD2HihX6rlXoDAlL0LxsPMyHwQpqN0Qw/exec';
         this.currentUser = null;
         this.currentScreen = 'login';
         this.ordersHistory = [];
@@ -15,7 +15,8 @@ class RestaurantOrderApp {
         this.currentOrderData = {}; // Для хранения введённых данных
         this.isAdmin = false;
         this.isSuperAdmin = false;
-        
+        this.cacheVersions = {};
+        this._submitting = false; // для блокировки двойной отправки
         this.init();
     }
 
@@ -23,40 +24,77 @@ class RestaurantOrderApp {
         this.renderScreen('login');
         this.setupEventListeners();
         this.hideLoading(); // Убедимся, что загрузка скрыта при старте
+        document.addEventListener('input', (e) => {
+          if (e.target.classList.contains('quantity-input') || e.target.classList.contains('comment-input')) {
+            const productName = e.target.dataset.productName;
+            const supplier = e.target.dataset.supplier;
+            const key = `${productName}|${supplier}`;
+            if (!this.currentOrderData[key]) this.currentOrderData[key] = {};
+            if (e.target.classList.contains('quantity-input')) {
+              this.currentOrderData[key].quantity = parseInt(e.target.value) || 0;
+            } else {
+              this.currentOrderData[key].comment = e.target.value;
+            }
+          }
+        });
     }
 
-    // Метод для сохранения текущих данных формы
-    saveCurrentFormData() {
-        const formData = {};
-        const quantityInputs = document.querySelectorAll('.quantity-input');
-        const commentInputs = document.querySelectorAll('.comment-input');
+    loadCachedVersions() {
+        const versions = localStorage.getItem('cache_versions');
+        return versions ? JSON.parse(versions) : {};
+    }
+    
+    saveCachedVersions(versions) {
+        localStorage.setItem('cache_versions', JSON.stringify(versions));
+    }
+    
+    getCachedData(sheetName) {
+        const data = localStorage.getItem(`cache_${sheetName}`);
+        return data ? JSON.parse(data) : null;
+    }
+    
+    saveCachedData(sheetName, data) {
+        localStorage.setItem(`cache_${sheetName}`, JSON.stringify(data));
+    }
+    
+    async syncData(force = false) {
+      try {
+        const serverVersions = await this.apiCall('get_versions');
+        const cachedVersions = this.loadCachedVersions();
         
-        quantityInputs.forEach(input => {
-            const productName = input.dataset.productName;
-            const supplier = input.dataset.supplier;
-            const key = `${productName}|${supplier}`;
-            const quantity = parseInt(input.value) || 0;
-            
-            if (!formData[key]) {
-                formData[key] = {};
-            }
-            formData[key].quantity = quantity;
+        const sheetsToLoad = [];
+        for (let sheet in serverVersions) {
+          if (force || serverVersions[sheet] !== cachedVersions[sheet]) {
+            sheetsToLoad.push(sheet);
+          }
+        }
+        
+        if (sheetsToLoad.length === 0) return;
+        
+        this.showLoading('Обновление данных...');
+        const promises = sheetsToLoad.map(sheet => {
+          switch(sheet) {
+            case 'Products': return this.apiCall('get_all_products');
+            case 'Suppliers': return this.apiCall('get_all_suppliers');
+            case 'Templates': return this.apiCall('get_all_templates');
+            case 'Users': return this.apiCall('get_all_users');
+            default: return null;
+          }
+        });
+        const results = await Promise.all(promises.filter(p => p));
+        
+        sheetsToLoad.forEach((sheet, index) => {
+          if (results[index]) {
+            this.saveCachedData(sheet, results[index]);
+          }
         });
         
-        commentInputs.forEach(input => {
-            const productName = input.dataset.productName;
-            const supplier = input.dataset.supplier;
-            const key = `${productName}|${supplier}`;
-            const comment = input.value;
-            
-            if (!formData[key]) {
-                formData[key] = {};
-            }
-            formData[key].comment = comment;
-        });
-        
-        // Сохраняем данные перед перерисовкой
-        this.currentOrderData = { ...this.currentOrderData, ...formData };
+        this.saveCachedVersions(serverVersions);
+        this.hideLoading();
+      } catch (error) {
+        console.error('Sync error:', error);
+        this.hideLoading();
+      }
     }
 
     // Метод для восстановления данных в форме
@@ -220,7 +258,10 @@ class RestaurantOrderApp {
                 isAdmin: loginResult.user.isAdmin || false
             };
             
-            // ========== ЭТО ЕДИНСТВЕННОЕ ПРАВИЛЬНОЕ РЕШЕНИЕ ==========
+            // после установки this.currentUser
+            await this.syncData();
+            this.showSuccess(`Добро пожаловать, ${this.currentUser.name}!`);
+            setTimeout(() => this.renderScreen('main'), 2000);
             // Преобразуем admin значение в строку и приводим к верхнему регистру
             const adminValue = String(this.currentUser.isAdmin).trim().toUpperCase();
             console.log('Admin value normalized:', adminValue);
@@ -295,6 +336,8 @@ class RestaurantOrderApp {
 
     // Отправка заявки
     async submitOrder(templateName) {
+        if (this._submitting) return;
+        this._submitting = true;
         if (!this.currentUser || !this.currentUser.phone) {
             this.showNotification('error', 'Ошибка: пользователь не авторизован');
             this.renderScreen('login');
@@ -346,6 +389,9 @@ class RestaurantOrderApp {
             this.hideLoading();
             this.enableUI(); // Разблокируем при ошибке
             this.showNotification('error', 'Ошибка отправки: ' + error.message);
+        }
+        finally {
+            this._submitting = false;
         }
     }
 
@@ -920,26 +966,28 @@ class RestaurantOrderApp {
     }
     // Новые методы для удаления товаров
     async showDeleteProductScreen() {
-        try {
-            this.showLoading('Загрузка товаров...');
-            const result = await this.apiCall('get_all_products');
-            const formData = await this.apiCall('get_product_form_data');
-            this.hideLoading();
-            
-            // Проверяем структуру ответа
-            console.log('Products result:', result);
-            const products = result.products || [];
-            
-            this.renderScreen('delete_product', { 
-                products: products, 
-                tags: formData.tags || [] 
-            });
-        } catch (error) {
-            this.hideLoading();
-            this.showNotification('error', 'Ошибка загрузки: ' + error.message);
+        let productsData = this.getCachedData('Products');
+        let formData = this.getCachedData('ProductFormData'); // если кэшируем и это
+        
+        if (!productsData || !formData) {
+          // если нет в кэше, загружаем с сервера
+          this.showLoading('Загрузка товаров...');
+          const [pResult, fResult] = await Promise.all([
+              this.apiCall('get_all_products'),
+              this.apiCall('get_product_form_data')
+          ]);
+          productsData = pResult;
+          formData = fResult;
+          this.saveCachedData('Products', pResult);
+          this.saveCachedData('ProductFormData', fResult);
+          this.hideLoading();
         }
+        
+        this.renderScreen('delete_product', { 
+          products: productsData.products || [], 
+          tags: formData.tags || [] 
+        });
     }
-
     // Обновленный renderDeleteProductScreen с правильным расположением поиска
     renderDeleteProductScreen(data) {
         const { products = [], tags = [] } = data;
@@ -1176,6 +1224,9 @@ class RestaurantOrderApp {
         try {
             this.showLoading('Удаление товаров...');
             await this.apiCall('delete_products', { productIds: selectedProducts });
+            localStorage.removeItem('cache_Products');
+            localStorage.removeItem('cache_ProductFormData');
+            localStorage.removeItem('cache_versions');
             this.showSuccess('Товары успешно удалены!');
             setTimeout(() => {
                 this.showDeleteProductScreen();
@@ -1326,6 +1377,8 @@ class RestaurantOrderApp {
         try {
             this.showLoading('Удаление поставщиков...');
             await this.apiCall('delete_suppliers', { supplierIds: selectedSuppliers });
+            localStorage.removeItem('cache_Suppliers');
+            localStorage.removeItem('cache_versions');
             this.showSuccess('Поставщики успешно удалены!');
             setTimeout(() => {
                 this.showDeleteSupplierScreen();
@@ -1337,20 +1390,24 @@ class RestaurantOrderApp {
 
     // Новые методы для управления шаблонами
     async showTemplatesManagementScreen() {
-        try {
-            this.showLoading('Загрузка шаблонов...');
-            const result = await this.apiCall('get_all_templates');
-            const formData = await this.apiCall('get_product_form_data');
-            this.hideLoading();
-            
-            const templates = result.templates || [];
-            const tags = formData.tags || [];
-            
-            this.renderScreen('manage_templates', { templates, tags });
-        } catch (error) {
-            this.hideLoading();
-            this.showNotification('error', 'Ошибка загрузки: ' + error.message);
-        }
+      try {
+        this.showLoading('Загрузка шаблонов...');
+        const data = await this.apiCall('get_templates_management_data');
+        this.hideLoading();
+        
+        this.renderScreen('manage_templates', { 
+          templates: data.templates || [], 
+          tags: data.tags || [] 
+        });
+        
+        // После рендера инициализируем выбранные теги (если нужно)
+        setTimeout(() => {
+          this.initTemplateTagsSelection(data.templates || []);
+        }, 100);
+      } catch (error) {
+        this.hideLoading();
+        this.showNotification('error', 'Ошибка загрузки: ' + error.message);
+      }
     }
     
     // Обновленный renderTemplatesManagementScreen с правильным отображением выбранных тегов
@@ -1493,6 +1550,8 @@ class RestaurantOrderApp {
                 product_tags, 
                 tg_id_admin 
             });
+            localStorage.removeItem('cache_Templates');
+            localStorage.removeItem('cache_versions');
             this.showSuccess('Шаблон успешно обновлен!');
             // Перезагружаем экран чтобы обновить данные
             setTimeout(() => {
@@ -1534,6 +1593,8 @@ class RestaurantOrderApp {
                 product_tags, 
                 tg_id_admin 
             });
+            localStorage.removeItem('cache_Templates');
+            localStorage.removeItem('cache_versions');
             this.showSuccess('Шаблон успешно добавлен!');
             setTimeout(() => {
                 this.showTemplatesManagementScreen();
@@ -1615,6 +1676,8 @@ class RestaurantOrderApp {
         try {
             this.showLoading('Удаление шаблона...');
             await this.apiCall('delete_template', { templateId });
+            localStorage.removeItem('cache_Templates');
+            localStorage.removeItem('cache_versions');
             this.showSuccess('Шаблон успешно удален!');
             setTimeout(() => {
                 this.showTemplatesManagementScreen();
@@ -1626,26 +1689,23 @@ class RestaurantOrderApp {
 
     // методы для управления пользователями
    async showUsersManagementScreen() {
-        try {
-            this.showLoading('Загрузка пользователей...');
-            const usersResult = await this.apiCall('get_all_users');
-            const templatesResult = await this.apiCall('get_all_templates');
-            this.hideLoading();
-            
-            const users = usersResult.users || [];
-            const templates = templatesResult.templates || [];
-            
-            this.renderScreen('manage_users', { users, templates });
-            
-            // Инициализируем выбранные шаблоны после рендера
-            setTimeout(() => {
-                this.initUserTemplatesSelection(users);
-            }, 100);
-            
-        } catch (error) {
-            this.hideLoading();
-            this.showNotification('error', 'Ошибка загрузки: ' + error.message);
-        }
+      try {
+        this.showLoading('Загрузка пользователей...');
+        const data = await this.apiCall('get_users_management_data');
+        this.hideLoading();
+        
+        this.renderScreen('manage_users', { 
+          users: data.users || [], 
+          templates: data.templates || [] 
+        });
+        
+        setTimeout(() => {
+          this.initUserTemplatesSelection(data.users || []);
+        }, 100);
+      } catch (error) {
+        this.hideLoading();
+        this.showNotification('error', 'Ошибка загрузки: ' + error.message);
+      }
     }
 
     // Метод для инициализации выбранных шаблонов в существующих пользователях
@@ -1859,6 +1919,8 @@ class RestaurantOrderApp {
                 admin, 
                 is_active: 'TRUE' 
             });
+            localStorage.removeItem('cache_Users');
+            localStorage.removeItem('cache_versions');
             this.showSuccess('Пользователь успешно добавлен!');
             setTimeout(() => {
                 this.showUsersManagementScreen();
@@ -1895,6 +1957,8 @@ class RestaurantOrderApp {
                 templates, 
                 admin 
             });
+            localStorage.removeItem('cache_Users');
+            localStorage.removeItem('cache_versions');
             this.showSuccess('Пользователь успешно обновлен!');
         } catch (error) {
             this.hideLoading();
@@ -1911,6 +1975,8 @@ class RestaurantOrderApp {
         try {
             this.showLoading('Удаление пользователя...');
             await this.apiCall('delete_user', { userPhone });
+            localStorage.removeItem('cache_Users');
+            localStorage.removeItem('cache_versions');
             this.showSuccess('Пользователь успешно удален!');
             setTimeout(() => {
                 this.showUsersManagementScreen();
@@ -1925,6 +1991,9 @@ class RestaurantOrderApp {
         try {
             this.showLoading('Добавление товара...');
             const result = await this.apiCall('add_product', productData);
+            localStorage.removeItem('cache_Products');
+            localStorage.removeItem('cache_ProductFormData');
+            localStorage.removeItem('cache_versions');
             this.showSuccess('Товар успешно добавлен!');
             setTimeout(() => {
                 this.renderScreen('main');
@@ -1948,6 +2017,8 @@ class RestaurantOrderApp {
             };
             
             const result = await this.apiCall('add_supplier', data);
+            localStorage.removeItem('cache_Suppliers');
+            localStorage.removeItem('cache_versions');
             this.showSuccess('Поставщик успешно добавлен!');
             setTimeout(() => {
                 this.renderScreen('main');
@@ -2541,6 +2612,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
