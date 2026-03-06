@@ -167,6 +167,17 @@ class RestaurantOrderApp {
         this.cachedProducts = productsData.products || [];
         this.cachedSuppliers = suppliersData.suppliers || [];
         this.cachedTemplates = templatesData.templates || [];
+        // Собираем теги
+        const tagsSet = new Set();
+        this.cachedProducts.forEach(p => {
+            if (p.product_tags) {
+                p.product_tags.split(',').forEach(tag => {
+                    tag = tag.trim();
+                    if (tag) tagsSet.add(tag);
+                });
+            }
+        });
+        this.cachedTags = Array.from(tagsSet).sort();
         this._dataLoaded = true;
         return;
       }
@@ -904,6 +915,12 @@ class RestaurantOrderApp {
     initProductsTable() {
         const container = document.getElementById('products-table');
         if (!container) return;
+        
+        // Инициализация массивов для отслеживания изменений
+        this._addedRows = [];
+        this._updatedRows = [];
+        this._deletedRows = [];
+        
         window.addEventListener('resize', () => {
             if (this.table) this.table.redraw();
         });
@@ -1021,6 +1038,41 @@ class RestaurantOrderApp {
             movableColumns: true,
             resizableColumns: true
         });
+        
+         // События для отслеживания изменений
+    this.table.on('rowAdded', (row) => {
+        const data = row.getData();
+        if (String(data.id).startsWith('new_')) {
+            this._addedRows.push(data);
+        }
+    });
+
+    this.table.on('rowDeleted', (row) => {
+        const data = row.getData();
+        if (data.id && !String(data.id).startsWith('new_')) {
+            this._deletedRows.push(data.id);
+        } else {
+            // Удаляем несохранённую строку из _addedRows
+            this._addedRows = this._addedRows.filter(r => r.id !== data.id);
+        }
+    });
+
+    this.table.on('cellEdited', (cell) => {
+        const row = cell.getRow();
+        const data = row.getData();
+        if (!String(data.id).startsWith('new_')) {
+            if (!this._updatedRows.some(r => r.id === data.id)) {
+                this._updatedRows.push(data);
+            }
+        } else {
+            // Обновляем данные в _addedRows
+            const index = this._addedRows.findIndex(r => r.id === data.id);
+            if (index !== -1) {
+                this._addedRows[index] = data;
+            }
+        }
+    });
+        
         window.addEventListener('resize', () => {
             if (this.table) this.table.redraw();
         });
@@ -1030,7 +1082,7 @@ class RestaurantOrderApp {
     addProductRow() {
         if (!this.table) return;
         this.table.addRow({
-            id: 'new_' + Date.now(), // временный ID
+            id: 'new_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
             name: '',
             product_tags: '',
             unit: 'шт',
@@ -1038,14 +1090,20 @@ class RestaurantOrderApp {
             shelf_life: '',
             min_stock: 1,
             supplier: ''
-        }, true); // true - добавить в начало
+        }, true);
     }
-
+    
     async saveProductsTable() {
         if (!this.table) return;
     
         // Получаем все изменения
-        const changes = this.getTableChanges();
+        const changes = {
+            updated: this._updatedRows,
+            added: this._addedRows,
+            deleted: this._deletedRows
+        };
+        
+        
         if (!changes.updated.length && !changes.added.length && !changes.deleted.length) {
             this.showNotification('info', 'Нет изменений для сохранения');
             return;
@@ -1092,6 +1150,11 @@ class RestaurantOrderApp {
             localStorage.removeItem('cache_ProductFormData');
             localStorage.removeItem('cache_versions');
     
+             // Очищаем временные массивы
+            this._updatedRows = [];
+            this._addedRows = [];
+            this._deletedRows = [];
+        
             this.showSuccess('Товары сохранены!');
             setTimeout(() => {
                 this.renderScreen('main');
