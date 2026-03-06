@@ -9,6 +9,7 @@ class RestaurantOrderApp {
         this.cachedTemplates = [];
         this.cachedUsers = [];
         this.cachedTags = null;
+        this._loadingCounter = 0;
         this._dataLoaded = false; // флаг для однократной загрузки
         this.apiUrl = 'https://script.google.com/macros/s/AKfycbzpAuZ1AU--_zED2-k_wTHeEqXxdXG8WDko7rhD2HihX6rlXoDAlL0LxsPMyHwQpqN0Qw/exec';
         this.currentUser = null;
@@ -177,23 +178,31 @@ class RestaurantOrderApp {
         });
     }
      // Показать анимацию загрузки
-    showLoading(text = 'Загрузка...') {
-        const overlay = document.getElementById('loadingOverlay');
-        const loadingText = document.getElementById('loadingText');
-        
-        if (overlay && loadingText) {
-            loadingText.textContent = text;
-            overlay.classList.add('active');
+    showLoading(text = 'Ща всё будет...') {
+        this._loadingCounter++;
+        if (this._loadingCounter === 1) {
+            const overlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            if (overlay && loadingText) {
+                loadingText.textContent = text;
+                overlay.classList.add('active');
+            }
+        } else {
+            // просто обновляем текст
+            const loadingText = document.getElementById('loadingText');
+            if (loadingText) loadingText.textContent = text;
         }
     }
 
     // Скрыть анимацию загрузки
     hideLoading() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.classList.remove('active');
+        this._loadingCounter--;
+        if (this._loadingCounter <= 0) {
+            this._loadingCounter = 0;
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.classList.remove('active');
+            this.enableUI();
         }
-        this.enableUI(); // Всегда разблокируем UI при скрытии загрузки
     }
 
     // Блокировка всех интерактивных элементов
@@ -2698,6 +2707,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
