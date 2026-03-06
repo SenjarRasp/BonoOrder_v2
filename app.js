@@ -3,7 +3,11 @@ class RestaurantOrderApp {
         this.basePath = window.location.pathname.includes('/BonoOrder_v2/') 
             ? '/BonoOrder_v2/' 
             : '/';
-        
+
+        this.cachedProducts = [];
+        this.cachedSuppliers = [];
+        this.cachedTemplates = [];
+        this._dataLoaded = false; // флаг для однократной загрузки
         this.apiUrl = 'https://script.google.com/macros/s/AKfycbzpAuZ1AU--_zED2-k_wTHeEqXxdXG8WDko7rhD2HihX6rlXoDAlL0LxsPMyHwQpqN0Qw/exec';
         this.currentUser = null;
         this.currentScreen = 'login';
@@ -39,6 +43,49 @@ class RestaurantOrderApp {
         });
     }
 
+    async loadAllCachedData(force = false) {
+      // Если уже загружено и не форсируем, выходим
+      if (this._dataLoaded && !force) return;
+    
+      // Пробуем получить из localStorage
+      const productsData = this.getCachedData('Products');
+      const suppliersData = this.getCachedData('Suppliers');
+      const templatesData = this.getCachedData('Templates');
+    
+      if (productsData && suppliersData && templatesData) {
+        this.cachedProducts = productsData.products || [];
+        this.cachedSuppliers = suppliersData.suppliers || [];
+        this.cachedTemplates = templatesData.templates || [];
+        this._dataLoaded = true;
+        return;
+      }
+    
+      // Если чего-то нет в кэше, загружаем всё с сервера
+      this.showLoading('Загрузка справочников...');
+      try {
+        const [products, suppliers, templates] = await Promise.all([
+          this.apiCall('get_all_products'),
+          this.apiCall('get_all_suppliers'),
+          this.apiCall('get_all_templates')
+        ]);
+    
+        this.cachedProducts = products.products || [];
+        this.cachedSuppliers = suppliers.suppliers || [];
+        this.cachedTemplates = templates.templates || [];
+    
+        this.saveCachedData('Products', products);
+        this.saveCachedData('Suppliers', suppliers);
+        this.saveCachedData('Templates', templates);
+        this._dataLoaded = true;
+    
+        this.hideLoading();
+      } catch (error) {
+        this.hideLoading();
+        console.error('Ошибка загрузки справочников:', error);
+        throw error;
+      }
+    }
+    
     loadCachedVersions() {
         const versions = localStorage.getItem('cache_versions');
         return versions ? JSON.parse(versions) : {};
@@ -260,6 +307,8 @@ class RestaurantOrderApp {
             
             // после установки this.currentUser
             await this.syncData();
+            await this.loadAllCachedData();  // загружает из localStorage в память
+            
             this.showSuccess(`Добро пожаловать, ${this.currentUser.name}!`);
             setTimeout(() => this.renderScreen('main'), 2000);
             // Преобразуем admin значение в строку и приводим к верхнему регистру
@@ -290,48 +339,59 @@ class RestaurantOrderApp {
 
     // Загрузка доступных шаблонов
     async loadUserTemplates() {
-        try {
-            this.showLoading('Загрузка шаблонов...');
-            const result = await this.apiCall('get_user_templates', {
-                userPhone: this.currentUser.phone
-            });
-            
-            this.availableTemplates = result.templates;
-            this.hideLoading();
-            this.enableUI(); // Разблокируем UI после загрузки
-            this.renderScreen('template_selection');
-        } catch (error) {
-            this.hideLoading();
-            this.enableUI(); // Разблокируем UI при ошибке
-            this.showNotification('error', 'Ошибка загрузки шаблонов: ' + error.message);
-        }
+      try {
+        // Убеждаемся, что данные в памяти есть
+        await this.loadAllCachedData();
+    
+        // Фильтруем шаблоны, доступные пользователю
+        this.availableTemplates = this.cachedTemplates.filter(t =>
+          this.currentUser.templates.includes(t.name)
+        );
+    
+        this.renderScreen('template_selection');
+      } catch (error) {
+        this.showNotification('error', 'Ошибка загрузки шаблонов: ' + error.message);
+      }
     }
 
     // Загрузка товаров по шаблону
     async loadTemplateProducts(templateName) {
-        try {
-            this.showLoading('Загрузка товаров...');
-            const result = await this.apiCall('get_products_by_template', {
-                templateName: templateName,
-                userPhone: this.currentUser.phone
+      try {
+        await this.loadAllCachedData();
+    
+        const template = this.cachedTemplates.find(t => t.name === templateName);
+        if (!template) throw new Error('Шаблон не найден');
+    
+        const templateTags = template.product_tags ? template.product_tags.split(',').map(t => t.trim()) : [];
+    
+        const filteredProducts = [];
+        this.cachedProducts.forEach(product => {
+          const itemTags = product.product_tags ? product.product_tags.split(',').map(t => t.trim()) : [];
+          if (itemTags.length === 0) return; // товары без тегов не включаем
+    
+          const hasMatchingTag = templateTags.length === 0 || itemTags.some(tag => templateTags.includes(tag));
+          if (!hasMatchingTag) return;
+    
+          // Размножаем товар на каждого поставщика
+          const suppliers = product.supplier ? product.supplier.split(',').map(s => s.trim()) : [''];
+          suppliers.forEach(supplier => {
+            filteredProducts.push({
+              name: product.name,
+              unit: product.unit || 'шт',
+              supplier: supplier,
+              shelf_life: product.shelf_life || '',
+              min_stock: product.min_stock || 0,
+              product_tags: product.product_tags || ''
             });
-            
-            this.hideLoading();
-            this.enableUI();
-            
-            // Сохраняем товары и название шаблона для перерисовки
-            this.currentProducts = result.products;
-            this.currentTemplateName = templateName;
-            
-            this.renderScreen('order_creation', { 
-                templateName: templateName,
-                products: result.products 
-            });
-        } catch (error) {
-            this.hideLoading();
-            this.enableUI();
-            this.showNotification('error', 'Ошибка загрузки товаров: ' + error.message);
-        }
+          });
+        });
+    
+        this.currentProducts = filteredProducts;
+        this.currentTemplateName = templateName;
+        this.renderScreen('order_creation', { templateName, products: filteredProducts });
+      } catch (error) {
+        this.showNotification('error', 'Ошибка загрузки товаров: ' + error.message);
+      }
     }
 
     // Отправка заявки
@@ -432,9 +492,8 @@ class RestaurantOrderApp {
             
             // Специальная обработка для CORS ошибок
             if (error.message.includes('Failed to fetch') || error.message.includes('CORS') || error.message.includes('status: 0')) {
-                console.log('CORS/Network error detected, trying JSONP approach...');
-                return this.apiCallJSONP(action, data);
-            }
+                throw new Error('Ошибка сети. Проверьте подключение к интернету.');
+              }
             
             throw new Error('Ошибка соединения: ' + error.message);
         } finally {
@@ -1224,9 +1283,12 @@ class RestaurantOrderApp {
         try {
             this.showLoading('Удаление товаров...');
             await this.apiCall('delete_products', { productIds: selectedProducts });
+
+            this.cachedProducts = [];
             localStorage.removeItem('cache_Products');
             localStorage.removeItem('cache_ProductFormData');
             localStorage.removeItem('cache_versions');
+            
             this.showSuccess('Товары успешно удалены!');
             setTimeout(() => {
                 this.showDeleteProductScreen();
@@ -1377,8 +1439,11 @@ class RestaurantOrderApp {
         try {
             this.showLoading('Удаление поставщиков...');
             await this.apiCall('delete_suppliers', { supplierIds: selectedSuppliers });
+
+            this.cachedSuppliers = [];
             localStorage.removeItem('cache_Suppliers');
             localStorage.removeItem('cache_versions');
+            
             this.showSuccess('Поставщики успешно удалены!');
             setTimeout(() => {
                 this.showDeleteSupplierScreen();
@@ -1550,8 +1615,11 @@ class RestaurantOrderApp {
                 product_tags, 
                 tg_id_admin 
             });
+            
+            this.cachedTemplates = [];
             localStorage.removeItem('cache_Templates');
             localStorage.removeItem('cache_versions');
+            
             this.showSuccess('Шаблон успешно обновлен!');
             // Перезагружаем экран чтобы обновить данные
             setTimeout(() => {
@@ -1593,8 +1661,13 @@ class RestaurantOrderApp {
                 product_tags, 
                 tg_id_admin 
             });
+            
+
+            this.cachedTemplates = [];
             localStorage.removeItem('cache_Templates');
             localStorage.removeItem('cache_versions');
+            
+            
             this.showSuccess('Шаблон успешно добавлен!');
             setTimeout(() => {
                 this.showTemplatesManagementScreen();
@@ -1676,8 +1749,11 @@ class RestaurantOrderApp {
         try {
             this.showLoading('Удаление шаблона...');
             await this.apiCall('delete_template', { templateId });
+            
+            this.cachedTemplates = [];
             localStorage.removeItem('cache_Templates');
             localStorage.removeItem('cache_versions');
+            
             this.showSuccess('Шаблон успешно удален!');
             setTimeout(() => {
                 this.showTemplatesManagementScreen();
@@ -1919,8 +1995,11 @@ class RestaurantOrderApp {
                 admin, 
                 is_active: 'TRUE' 
             });
+
+            this.cachedUsers = [];
             localStorage.removeItem('cache_Users');
             localStorage.removeItem('cache_versions');
+            
             this.showSuccess('Пользователь успешно добавлен!');
             setTimeout(() => {
                 this.showUsersManagementScreen();
@@ -1957,8 +2036,11 @@ class RestaurantOrderApp {
                 templates, 
                 admin 
             });
+
+            this.cachedUsers = [];
             localStorage.removeItem('cache_Users');
             localStorage.removeItem('cache_versions');
+            
             this.showSuccess('Пользователь успешно обновлен!');
         } catch (error) {
             this.hideLoading();
@@ -1975,8 +2057,11 @@ class RestaurantOrderApp {
         try {
             this.showLoading('Удаление пользователя...');
             await this.apiCall('delete_user', { userPhone });
+            
+            this.cachedUsers = [];
             localStorage.removeItem('cache_Users');
             localStorage.removeItem('cache_versions');
+            
             this.showSuccess('Пользователь успешно удален!');
             setTimeout(() => {
                 this.showUsersManagementScreen();
@@ -1991,9 +2076,12 @@ class RestaurantOrderApp {
         try {
             this.showLoading('Добавление товара...');
             const result = await this.apiCall('add_product', productData);
+
+            this.cachedProducts = [];
             localStorage.removeItem('cache_Products');
             localStorage.removeItem('cache_ProductFormData');
             localStorage.removeItem('cache_versions');
+            
             this.showSuccess('Товар успешно добавлен!');
             setTimeout(() => {
                 this.renderScreen('main');
@@ -2017,8 +2105,11 @@ class RestaurantOrderApp {
             };
             
             const result = await this.apiCall('add_supplier', data);
+
+            this.cachedSuppliers = [];
             localStorage.removeItem('cache_Suppliers');
             localStorage.removeItem('cache_versions');
+            
             this.showSuccess('Поставщик успешно добавлен!');
             setTimeout(() => {
                 this.renderScreen('main');
@@ -2605,6 +2696,11 @@ class RestaurantOrderApp {
         this.currentUser = null;
         this.ordersHistory = [];
         this.availableTemplates = [];
+        this.cachedProducts = [];
+        this.cachedSuppliers = [];
+        this.cachedTemplates = [];
+        this.cachedUsers = [];
+        this._dataLoaded = false;
         this.enableUI(); // Разблокируем UI
         this.renderScreen('login');
     }
@@ -2612,6 +2708,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
