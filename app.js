@@ -23,6 +23,7 @@ class RestaurantOrderApp {
         this.isSuperAdmin = false;
         this.cacheVersions = {};
         this._submitting = false; // для блокировки двойной отправки
+        this._loadingHistory = false;
         this.init();
     }
 
@@ -632,9 +633,6 @@ class RestaurantOrderApp {
                     break;
                 case 'add_supplier':
                     screenHTML = this.renderAddSupplierScreen();
-                    break;
-                case 'delete_product':
-                    screenHTML = this.renderDeleteProductScreen(data);
                     break;
                 case 'delete_supplier':
                     screenHTML = this.renderDeleteSupplierScreen(data);
@@ -2700,6 +2698,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
