@@ -416,37 +416,29 @@ input:focus, textarea:focus, select:focus {
 
 /* Экран создания заявки */
 .order-screen {
-    flex: 1;
-    background: white;
-    padding: 10px;
-    animation: slideInFromRight 0.4s ease-out;
+    padding: 5px; /* было 10px */
 }
 
 .department-group {
-    margin-bottom: 20px;
-    padding: 12px;
-    background: #f8f9fa;
-    border-radius: 9px;
+    margin-bottom: 8px; /* было 20px */
+    padding: 8px; /* было 12px */
+    border-radius: 6px;
 }
 
 .department-header {
     background: #34495e;
     color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    margin: -12px -12px 10px -12px;
+    padding: 4px 10px; /* уменьшено с 8px 12px */
+    border-radius: 4px;
+    margin: -8px -8px 8px -8px; /* подгоняем под новый padding */
     font-weight: 600;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .product-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #ecf0f1;
-    gap: 6px;
+    padding: 6px 0; /* было 8px 0 */
+    gap: 4px; /* уменьшено с 6px */
 }
-
 .product-item:last-child {
     border-bottom: none;
 }
@@ -457,13 +449,8 @@ input:focus, textarea:focus, select:focus {
 }
 
 .product-name {
-    font-weight: 600;
-    margin-bottom: 2px;
-    font-size: 13px;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 12px; /* чуть меньше */
+    margin-bottom: 1px;
 }
 
 .product-unit {
@@ -472,30 +459,22 @@ input:focus, textarea:focus, select:focus {
 }
 
 .product-details {
-    font-size: 10px !important;
-    color: #7f8c8d !important;
-    line-height: 1.2;
+    font-size: 9px !important;
 }
 
 .quantity-input {
-    width: 40px;
-    padding: 6px 4px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 13px;
-    text-align: center;
-    flex-shrink: 0;
+    width: 36px; /* немного уже */
+    padding: 4px 2px;
+    font-size: 12px;
 }
 
 .comment-input {
-    width: 100px; /* Фиксированная узкая ширина */
-    min-width: 80px;
-    padding: 6px 8px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 10px;
-    flex-shrink: 0;
+    width: 90px;
+    min-width: 70px;
+    padding: 4px 6px;
+    font-size: 9px;
 }
+
 /* Уменьшаем отступы между группами при прокрутке */
 .department-group + .department-group {
     margin-top: 15px;
@@ -655,20 +634,9 @@ input:focus, textarea:focus, select:focus {
 
 /* Загрузка */
 .loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.95);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    z-index: 10000;
+    background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(5px);
 }
-
 .loading-overlay.active {
     display: flex;
     animation: fadeIn 0.3s ease;
@@ -685,28 +653,27 @@ input:focus, textarea:focus, select:focus {
 }
 
 .loading-text {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 400;
     color: #2c3e50;
-    text-align: center;
-    margin-bottom: 20px;
+    margin-top: 0;
+    letter-spacing: 0.3px;
 }
 
 .loading-dots {
-    display: inline-block;
-    position: relative;
-    width: 80px;
-    height: 80px;
-}
-
-.loading-dots div {
-    position: absolute;
-    top: 33px;
-    width: 13px;
-    height: 13px;
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e0e0e0;
+    border-top-color: #3498db;
     border-radius: 50%;
-    background: #3498db;
-    animation-timing-function: cubic-bezier(0, 1, 1, 0);
+    animation: spinner 0.8s linear infinite;
+    margin-bottom: 15px;
+}
+@keyframes spinner {
+    to { transform: rotate(360deg); }
+}
+.loading-dots div {
+    display: none; /* скрываем старые точки */
 }
 
 .loading-dots div:nth-child(1) {
@@ -746,14 +713,8 @@ input:focus, textarea:focus, select:focus {
 
 /* Progress bar */
 .progress-bar {
-    width: 200px;
-    height: 4px;
-    background: #ecf0f1;
-    border-radius: 2px;
-    margin: 10px 0;
-    overflow: hidden;
+    display: none; /* убираем старый прогресс-бар */
 }
-
 .progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #3498db, #2980b9);
@@ -1034,9 +995,12 @@ input:focus, textarea:focus, select:focus {
 
 /* Задержки для анимаций карточек */
 .action-card, .template-card {
-    animation: slideUp 0.6s ease-out;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
 }
-
+.action-card:hover, .template-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
 .action-card:nth-child(1) { animation-delay: 0.1s; }
 .action-card:nth-child(2) { animation-delay: 0.2s; }
 .action-card:nth-child(3) { animation-delay: 0.3s; }
@@ -1055,26 +1019,25 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* Обновленные стили для toggle switch с прозрачным центром */
-.grouping-toggle-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 10px;
-    padding: 8px;
-    background: #ffffff;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-
 .grouping-toggle-container:hover {
     border-color: #3498db;
     box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
+}
+.grouping-toggle-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 15px;
+    padding: 5px;
+    background: #f1f3f4;
+    border-radius: 30px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .toggle-switch {
     position: relative;
     display: inline-block;
+    width: 160px;
+    height: 36px;
 }
 
 .toggle-checkbox {
@@ -1084,32 +1047,30 @@ input:focus, textarea:focus, select:focus {
 .toggle-label {
     display: flex;
     align-items: center;
-    width: 200px;
-    height: 36px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 20px;
-    position: relative;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 30px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-    border: 1px solid #dee2e6;
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     overflow: hidden;
 }
 
-/* Toggle handle как рамка с прозрачным центром */
 .toggle-handle {
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 96px;
+    width: 78px;
     height: 32px;
-    background: transparent;
-    border: 2px solid #000000;
-    border-radius: 18px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 2;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    background: #3498db;
+    border-radius: 28px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
+
 
 /* Текст всегда видимый */
 .toggle-text-supplier,
@@ -1137,8 +1098,7 @@ input:focus, textarea:focus, select:focus {
 
 /* Состояния при переключении */
 .toggle-checkbox:checked + .toggle-label .toggle-handle {
-    transform: translateX(90px);
-    border-color: #000000;
+    transform: translateX(78px);
 }
 
 /* Активное состояние фона */
@@ -1185,7 +1145,20 @@ input:focus, textarea:focus, select:focus {
         padding: 12px;
         margin-bottom: 15px;
     }
-    
+    .order-screen {
+        padding: 3px;
+    }
+    .department-group {
+        padding: 5px;
+    }
+    .department-header {
+        padding: 3px 8px;
+        margin: -5px -5px 5px -5px;
+        font-size: 11px;
+    }
+    .product-item {
+        padding: 4px 0;
+    }
     .toggle-label {
         width: 200px;
         height: 40px;
@@ -1204,9 +1177,15 @@ input:focus, textarea:focus, select:focus {
     
     .toggle-text-supplier,
     .toggle-text-tags {
-        width: 90px;
+        position: relative;
+        z-index: 2;
         font-size: 12px;
-        padding: 6px 0;
+        font-weight: 500;
+        color: #2c3e50;
+        transition: color 0.2s ease;
+        padding: 0 10px;
+        text-align: center;
+        flex: 1;
     }
     
     .toggle-text-supplier {
@@ -1216,8 +1195,14 @@ input:focus, textarea:focus, select:focus {
     .toggle-text-tags {
         right: 8px;
     }
+    
 }
-
+.toggle-checkbox:not(:checked) + .toggle-label .toggle-text-supplier {
+    color: white;
+}
+.toggle-checkbox:checked + .toggle-label .toggle-text-tags {
+    color: white;
+}
 /* Дополнительные стили для лучшей читаемости */
 .toggle-text-supplier::before {
     content: "";
@@ -1704,3 +1689,4 @@ select[multiple] option:checked {
     padding: 4px 6px;
     width: 100%;
 }
+
