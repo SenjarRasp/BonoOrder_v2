@@ -12,7 +12,7 @@ class RestaurantOrderApp {
         this._loadingCounter = 0;
         this._originalOverlayHTML = null;
         this._dataLoaded = false; // флаг для однократной загрузки
-        this.apiUrl = 'https://script.google.com/macros/s/AKfycbw19I8NF1FQDPWiVl4XaNP8P_waWVucEuvmirRTWCCAJmXPBUAidWlXOlXB8ar3NYr6rg/exec';
+        this.apiUrl = 'https://script.google.com/macros/s/AKfycbxZdtABCy5FQTQX9PmPn2LjQz0JV4nsYnVGKFJchPSAjtcwtXv8YsZKWSmIrz5ogecyqQ/exec';
         this.currentUser = null;
         this.currentScreen = 'login';
         this.ordersHistory = [];
@@ -3341,6 +3341,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
