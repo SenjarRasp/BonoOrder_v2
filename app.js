@@ -533,9 +533,20 @@ class RestaurantOrderApp {
                 templates: loginResult.user.templates,
                 isAdmin: loginResult.user.isAdmin || false
             };
-            
-            await this.syncData();
-            await this.loadAllCachedData();
+
+            // Проверяем, есть ли уже данные в localStorage
+            const hasLocalData = this.getCachedData('Products') && 
+                                 this.getCachedData('Suppliers') && 
+                                 this.getCachedData('Templates');
+
+            if (!hasLocalData) {
+                // Первый вход – загружаем всё одним запросом
+                await this.loadAllDataOnce();
+            } else {
+                // Инкрементальная синхронизация
+                await this.syncData();
+                await this.loadAllCachedData();
+            }
             
             // Убедимся, что overlay активен перед приветствием
             if (!this.isLoadingActive()) {
@@ -692,14 +703,47 @@ class RestaurantOrderApp {
         }
     }
 
+    async loadAllDataOnce() {
+        this.showLoading('Загрузка справочников...');
+        try {
+            const allData = await this.apiCall('get_all_data'); // новый API-метод
+            this.cachedProducts = allData.products || [];
+            this.cachedSuppliers = allData.suppliers || [];
+            this.cachedTemplates = allData.templates || [];
+            this.cachedUsers = allData.users || [];
+            
+            // Собираем теги
+            const tagsSet = new Set();
+            this.cachedProducts.forEach(p => {
+                if (p.product_tags) {
+                    p.product_tags.split(',').forEach(tag => {
+                        tag = tag.trim();
+                        if (tag) tagsSet.add(tag);
+                    });
+                }
+            });
+            this.cachedTags = Array.from(tagsSet).sort();
+    
+            // Сохраняем в localStorage
+            this.saveCachedData('Products', { products: this.cachedProducts });
+            this.saveCachedData('Suppliers', { suppliers: this.cachedSuppliers });
+            this.saveCachedData('Templates', { templates: this.cachedTemplates });
+            this.saveCachedData('Users', { users: this.cachedUsers });
+    
+            this._dataLoaded = true;
+            this.hideLoading();
+        } catch (error) {
+            this.hideLoading();
+            throw error;
+        }
+    }
+    
     // API вызов
     async apiCall(action, data = {}) {
         console.log('📡 API Call:', action, data);
         
         try {
-            // Добавляем небольшую задержку между запросами
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
+                        
             const url = new URL(this.apiUrl);
             url.searchParams.set('action', action);
             url.searchParams.set('data', JSON.stringify(data));
@@ -3297,6 +3341,7 @@ class RestaurantOrderApp {
 
 // Инициализация приложения
 const app = new RestaurantOrderApp();
+
 
 
 
